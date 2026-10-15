@@ -162,57 +162,57 @@ def build_images_notebook():
         model_note="图像 1.13/1.14 都接受，用 `jev-latest` 即可。")
 
     cells += [
-        md("""## 1. 画三张“门口相机”测试图
+        md("""## 1. 素材：真实感的分拣台场景图
 
-场景设定：小区门口的相机。用 Pillow 画三张 800×600 的图——
+场景：仓库分拣台的相机。素材取自知识库 40 号条目（EmbodiedJev 行知工作台）的
+MuJoCo 物理渲染画面——灰桌面上一个红色包裹，上方是机械臂夹爪。原图是高清界面
+截图，我们裁出左侧场景区（780×700）存放在本册 `scenes/` 目录。
 
-| 图 | 内容 | 用来回答 |
-|---|---|---|
-| `visitor` | 桌面前站着一个人形，手上有棕色包裹 | 有人吗？带了什么？ |
-| `empty` | 只有桌面与墙面 | 有人吗？ |
-| `courier_box` | 特写的包裹（用于 4 节的选项示例） | 质检选项定义 |
+用现成渲染图而不是手绘示意，原因是本册要**测模型在真实光影下的表现**：桌面反光、
+透视、阴影这些“脏东西”，恰恰是简笔画里没有、而真实部署里必然存在的。"""),
 
-程序画图的好处：**内容完全受控、可复现，而且没有版权问题**。真实项目里换成
-`Image(Path("camera.jpg"))` 即可，接口完全一致。"""),
         code("""from PIL import Image as PILImage, ImageDraw
 
-def desk_scene(person=False, parcel=False, w=800, h=600):
-    \"\"\"画一张门口场景：墙面 + 桌面 + 可选的人形与包裹。\"\"\"
-    img = PILImage.new("RGB", (w, h), (214, 216, 222))          # 墙
+SCENES = Path("scenes")
+parcel_desk = SCENES / "parcel_desk.png"     # 红包裹静置桌面
+arm_above = SCENES / "arm_above.png"         # 夹爪移到包裹上方
+holding = SCENES / "holding.png"             # 包裹被夹爪抓起
+missing_scene = [p.name for p in (parcel_desk, arm_above, holding) if not p.exists()]
+print("场景素材缺失：" + str(missing_scene) if missing_scene
+      else "三张分拣台场景就位 ✅")"""),
+        md("""亲眼确认素材（老规矩：**给模型看的图，自己也得看过**）："""),
+        code("""from IPython.display import display
+
+if not missing_scene:
+    display(PILImage.open(parcel_desk).resize((390, 350)))"""),
+        md("""另备一组**程序可控图**（第 3、4 节的变量控制要用）：
+
+| 图 | 内容 | 服务哪个实验 |
+|---|---|---|
+| `visitor` | 蓝衣人形 + 棕色包裹 | 3 节门禁比对（同款/红衣徽章） |
+| `courier_box` | 包裹特写（完好） | 4 节质检选项示例 |
+
+真实图测“表现”，可控图控“变量”——门禁比对要保证两张徽章**只差衣服颜色一个变量**，
+这种精确控制搜图搜不来，只能自己画。两类素材的分工是实验设计的一部分。"""),
+        code("""def stick_figure(shirt=(60, 90, 150), parcel=False, w=800, h=600):
+    # 可控人形场景：shirt 颜色与是否带包裹是仅有的两个变量
+    img = PILImage.new("RGB", (w, h), (214, 216, 222))
     d = ImageDraw.Draw(img)
-    d.rectangle([40, 380, w - 40, h - 40], fill=(178, 160, 140))   # 桌面
-    if person:
-        d.ellipse([330, 90, 470, 230], fill=(70, 110, 170))   # 头
-        d.polygon([(310, 240), (490, 240), (520, 400), (280, 400)],
-                  fill=(60, 90, 150))                          # 身体
+    d.rectangle([40, 380, w - 40, h - 40], fill=(178, 160, 140))
+    d.ellipse([330, 90, 470, 230], fill=(70, 110, 170))
+    d.polygon([(310, 240), (490, 240), (520, 400), (280, 400)], fill=shirt)
     if parcel:
         d.rectangle([360, 300, 560, 420], fill=(150, 105, 60),
-                    outline=(90, 60, 30), width=4)             # 棕色包裹
-        d.line([360, 300, 560, 420], fill=(90, 60, 30), width=3)
-        d.line([360, 420, 560, 300], fill=(90, 60, 30), width=3)
+                    outline=(90, 60, 30), width=4)
     return img
 
 Path("/tmp/jev_img").mkdir(exist_ok=True)
-desk_scene(person=True, parcel=True).save("/tmp/jev_img/visitor.jpg", quality=90)
-desk_scene().save("/tmp/jev_img/empty.jpg", quality=90)
-desk_scene(parcel=True).save("/tmp/jev_img/courier_box.jpg", quality=90)
-print("三张测试图已写入 /tmp/jev_img/（visitor / empty / courier_box）")"""),
-        md("""在笔记本里直接看一眼 `visitor`（防止我们在给模型喂一张意料之外的图）："""),
-        code("""from IPython.display import display
-
-display(desk_scene(person=True, parcel=True).resize((400, 300)))"""),
-        md("""### 观察：简笔画 ≠ 照片
-
-这三张是**程序画的示意图**。官方文档明确警告“所有模型（Jev 也不例外）在多模态上弱于纯文本”——
-对简笔画，模型的表现波动比真实照片大——本册实测简笔“人形+包裹”的 Noul 到了 0.93，
-但更抽象的图形可能明显更低。把它当作特性边界来读：换成真实照片，
-确定性通常更高、也更稳。"""),
-
-        md("""### 0.6 离线数据约定
-
-各实验的离线示例值**就近写在每次调用里**（`offline_answers` 参数），不在开头集中堆放——
-这样每个实验自证口径：真实值是什么、离线替身是什么，一眼可对照。示例值的量级参考
-官方文档与 42 号条目的自报数据手工拟制，只保证结构与方向合理，不代表模型真实输出。"""),
+stick_figure(parcel=True).save("/tmp/jev_img/visitor.jpg", quality=90)
+stick_figure().save("/tmp/jev_img/empty.jpg", quality=90)
+crop = stick_figure(parcel=True).crop((340, 280, 580, 440))
+crop = crop.resize((480, 320))          # 240x160 太小会被 400，放大到合规
+crop.save("/tmp/jev_img/courier_box.jpg", quality=90)
+print("可控图就绪：visitor / empty / courier_box")"""),
 
         md("""## 2. 位置一：图像放进 `state`
 
@@ -235,29 +235,38 @@ else:
 
 现在带上开关，正式发起这次实验："""),
         code("""IMG_Q1 = {
-    "has_person": Noul(instructions="Is there a person in `photo`?"),
-    "carrying": Choice(instructions="What is the person in `photo` carrying?", criteria={
-        "parcel": "A box or parcel.",
-        "food_bag": "A food delivery bag.",
-        "nothing": "Empty hands or no person."}),
+    "has_parcel": Noul(instructions="Is there a red parcel on the desk in `photo`?"),
+    "where": Choice(instructions="Where is the red parcel in `photo`?", criteria={
+        "on_desk": "Resting on the desk.",
+        "held_by_gripper": "Held in the air by the robot gripper.",
+        "not_visible": "Not visible in this photo."}),
 }
 
-resp1 = ts.call(
-    state={"photo": Image(Path("/tmp/jev_img/visitor.jpg"))},
-    questions=IMG_Q1,
-    offline_answers={
-        "has_person": _FakeAnswer(type="noul", noul=0.62),
-        "carrying": _FakeAnswer(type="choice", choice="parcel", confidence=0.8),
-    }, tokens=1670)
-for k, a in resp1.answers.items():
-    print(f"{k:12s} noul={getattr(a, 'noul', None)} choice={getattr(a, 'choice', None)}"
-          f" confidence={getattr(a, 'confidence', None)}")
-print(f"usage: {resp1.usage.input_tokens} input tokens")"""),
-        md("""### 观察要点
+resp1 = None
+if not missing_scene:
+    resp1 = ts.call(
+        state={"photo": Image(parcel_desk)},
+        questions=IMG_Q1,
+        offline_answers={
+            "has_parcel": _FakeAnswer(type="noul", noul=0.74),
+            "where": _FakeAnswer(type="choice", choice="on_desk", confidence=0.98),
+        }, tokens=1409)
+    for k, a in resp1.answers.items():
+        print(f"{k:12s} noul={getattr(a, 'noul', None)} choice={getattr(a, 'choice', None)}"
+              f" confidence={getattr(a, 'confidence', None)}")
+    print(f"usage: {resp1.usage.input_tokens} input tokens")
+else:
+    print("（素材缺失，跳过真实调用）")"""),        md("""### 观察要点
 
-- **两个问题共享一次请求与同一张图**：token 只算一份图的（本例约 1.6k），这是把图放在 `state` 的最大好处；
-- `empty.jpg` 的对照实验在 5.3 节（帧序列）里一起做；
-- 注意 Noul 的数值：简笔画上模型明显不如在真实照片上笃定。"""),
+- **两个问题共享一次请求与同一张图**：token 只算一份图的，这是把图放在 `state` 的最大好处；
+- 真实光影下的读数值得细品：`where` 很笃定（on_desk 概率 0.99），`has_parcel` 却只有
+  0.74——**“在哪儿”答得果断，“有没有”反而犹豫**。桌面反光和阴影让“存在性”判断
+  变难了，这种细节是简笔画素材上永远看不到的（也是第 7 册 box 实验翻车的伏笔）；
+- 概率低于预期时，先别急着怪模型：把图拿出来亲眼看一遍（我们第 1 节就 display 过），
+  确认模型看到的和你以为它看到的是同一张图。"""),
+        md("""顺带一个对照练习：同一张 `empty.jpg`（可控图工坊里那张没有人形和包裹的空桌）
+问 `IMG_Q1`，`has_parcel` 应该接近 0。真实图与可控图各问一遍，你就能亲手量出
+“场景干净程度”对置信度的影响——这比任何文档描述都直观。"""),
 
         md("""## 3. 位置二：多图状态——门禁比对
 
@@ -538,6 +547,10 @@ print("最新一帧是关着的 noul =", door.answers["now_closed"].noul)"""),
 - 三张图只发一次请求；问题可以用路径引用某一帧（`` `frames[2]` ``）——**结构化 state
   的引用语法对图像同样有效**；
 - 帧数×每帧 token 就是成本：帧序列很容易把单次请求推到几千 token，够用时别多放。"""),
+        md("""至此本册动用了三类素材，它们各自回答不同的问题：**真实渲染图**（分拣台
+三张）测模型在真实光影下的表现；**程序可控图**（人形与徽章、门的三帧）把变量
+拧到只剩一个，做归因；**真实表情包**（第 4 节）跑最有烟火气的应用。选素材就是
+选实验设计——这个习惯比任何一个具体结论都更值得从本册带走。"""),
 
         md("""---
 
@@ -584,151 +597,212 @@ def build_box_notebook():
         model_note="box **只在 1.14 可用**，必须 `jev-preview` 或 `jev-1.14.0`；1.13 会拒绝。")
 
     cells += [
-        md("""## 1. 随机摆放一个包裹（真值已知）
+        md("""## 1. 素材与真值标定
 
-场景：仓库分拣台的俯视相机。在 800×600 的图里**随机**放一个棕色包裹，
-画图函数同时返回真值框（像素坐标）。因为位置是随机的，每次实验都是新样本；
-因为真值是我们自己定的，判分不依赖人工标注。"""),
-        code("""import random
+三张**真实感渲染**的分拣台场景（与第 6 册同源，`scenes/` 目录）：红包裹静置桌面
+（`parcel_desk`，高清截图裁剪）、夹爪移到包裹上方（`arm_above`）、包裹被夹起悬空
+（`holding`，演示 GIF 抽帧）。
+
+真实图的代价是**真值不再由画图函数自动给出**。我们逐张目视标定红包裹的框，
+写进代码常量（归一化边），并画到图上亲眼复核——标定是人工的，但之后的判分链
+（IoU 计算、统计）全部自动。目视标定有 ±0.02 量级的误差，对本册结论足够。"""),
+        code("""from PIL import Image as PILImage
+
+SCENES = Path("scenes")
+# 人工目视标定：红包裹的 (left, top, right, bottom) 归一化边
+TRUTH = {
+    "parcel_desk.png": (0.385, 0.47, 0.54, 0.64),
+    "arm_above.png":   (0.34, 0.58, 0.60, 0.76),
+    "holding.png":     (0.40, 0.36, 0.66, 0.56),
+}
+missing_scene = [n for n in TRUTH if not (SCENES / n).exists()]
+print("素材缺失：" + str(missing_scene) if missing_scene else "三图与标定就位 ✅")"""),
+        code("""from PIL import ImageDraw
 from IPython.display import display
-from PIL import Image as PILImage, ImageDraw
 
-def parcel_at(x0, y0, w, h, size=(800, 600)):
-    \"\"\"在 (x0,y0) 处画一个 w×h 的包裹，返回 (图, 真值像素框)。\"\"\"
-    img = PILImage.new("RGB", size, (205, 206, 210))
+def draw_box(img, box, color, width=5):
+    # 把归一化边画到图上（调试与标定复核的通用小工具）
+    w, h = img.size
     d = ImageDraw.Draw(img)
-    d.rectangle([30, 30, size[0]-30, size[1]-30], outline=(170, 172, 178), width=3)
-    d.rectangle([x0, y0, x0+w, y0+h], fill=(150, 105, 60),
-                outline=(90, 60, 30), width=4)
-    d.line([x0, y0, x0+w, y0+h], fill=(90, 60, 30), width=2)
-    d.line([x0, y0+h, x0+w, y0], fill=(90, 60, 30), width=2)
-    return img, (x0, y0, x0+w, y0+h)
+    d.rectangle([box[0]*w, box[1]*h, box[2]*w, box[3]*h],
+                outline=color, width=width)
+    return img
 
-random.seed(7)
-x, y = random.randint(80, 520), random.randint(60, 360)
-img0, truth0 = parcel_at(x, y, 220, 180)
-img0.save("/tmp/jev_img/box_probe.jpg", quality=90)
-print(f"包裹真值框（像素）：{truth0}")"""),
-        md("""### 为什么“真值即代码”很重要
+if not missing_scene:
+    base = PILImage.open(SCENES / "parcel_desk.png").convert("RGB")
+    display(draw_box(base, TRUTH["parcel_desk.png"], (255, 0, 0))
+            .resize((390, 350)))"""),
+        md("""红框应恰好套住桌面上的红包裹——**标定可信，后面 IoU≈0 才能怪模型**。
+（先自己复核标注，再跑模型，是评测的基本功。）
 
-网上大多数 box 演示只能靠肉眼判断“框得准不准”。本册把画图与判分都交给程序：
-包裹的位置由 `random.seed` 决定，真值框由画图函数直接返回，IoU 由四行代码计算——
-**整条判分链没有人工环节**。这正是知识库 40 号（行知“成功由物理判定”）与
-30 号（对照实验方法论）强调的原则：别信演示，信可复算的判分。"""),
+## 2. 第一次 box 请求：读框、裁剪、画出来
 
-        md("""## 2. 第一次 box 请求与“读框”
+流程与官方文档一致：分数边 → 像素框 → 裁剪。但本册多做一步——把**预测框也画回
+原图**，与标定框同框对比。这一步会让后面发生的事情一目了然："""),
+        md("""三张图各司其职：`parcel_desk` 高清、光影干净，是“最接近真实照片”的考卷；
+`arm_above` 与 `holding` 来自演示 GIF 的抽帧，画质有压缩损伤——三张一起测，
+顺便能看到画质对定位的影响。"""),
 
-box 问题的 `instructions` 写**要找什么、在哪张图**（“the parcel in `photo`”），
-不需要是疑问句，也没有 `criteria`。请求必须：① 带 `jev-preview` 模型；② 带图像开关。"""),
-        code("""BOX_Q = {"parcel": {"type": "box", "instructions": "the parcel in `photo`"}}
-
-r0 = ts.call(
-    state={"photo": Image(Path("/tmp/jev_img/box_probe.jpg"))},
-    questions=BOX_Q,
-    offline_answers={"parcel": _FakeAnswer(
-        type="box", box={"top": 0.14, "bottom": 0.44, "left": 0.31, "right": 0.59},
-        confidence=0.86)}, tokens=1580)
-a0 = r0.answers["parcel"]
-print("box =", a0.box, "| confidence =", a0.confidence)"""),
-        md("""### 2.1 分数边 → 像素框：裁出目标
-
-四条边乘回图的宽高就是像素坐标，可以直接裁剪（官方文档的读框代码）："""),
         code("""def edge(edges, k):
-    # SDK 的 box 是对象、离线替身是 dict——两种都取得到
-    return edges[k] if isinstance(edges, dict) else getattr(edges, k)
+    # SDK 返回对象、替身可能是 dict 或 (l,t,r,b) 元组——三种都取得到
+    if isinstance(edges, dict):
+        return edges[k]
+    if isinstance(edges, (tuple, list)):
+        return dict(zip(("left", "top", "right", "bottom"), edges))[k]
+    return getattr(edges, k)
 
 def to_pixels(edges, size):
-    \"\"\"分数边 -> 像素框 (left, top, right, bottom)。\"\"\"
+    # 分数边 -> 像素框 (left, top, right, bottom)
     w, h = size
     return (round(edge(edges, "left") * w), round(edge(edges, "top") * h),
             round(edge(edges, "right") * w), round(edge(edges, "bottom") * h))
 
-pred0 = to_pixels(a0.box, img0.size)
-print(f"预测像素框：{pred0}（真值 {truth0}）")
-crop0 = img0.crop(pred0)
-crop0.save("/tmp/jev_img/box_crop0.jpg", quality=90)
-display(crop0.resize((280, 200)))"""),
-        md("""## 3. 自动判分：IoU
+def iou(box_a, box_b):
+    inter = (max(0, min(box_a[2], box_b[2]) - max(box_a[0], box_b[0]))
+             * max(0, min(box_a[3], box_b[3]) - max(box_a[1], box_b[1])))
+    union = ((box_a[2]-box_a[0])*(box_a[3]-box_a[1])
+             + (box_b[2]-box_b[0])*(box_b[3]-box_b[1]) - inter)
+    return inter / union if union else 0.0
+print("工具函数就绪：edge / to_pixels / iou")"""),
+        code("""BOX_Q = {"parcel": {"type": "box",
+                   "instructions": "the red parcel in `photo`"}}
 
-肉眼看一两次不算数。**交并比（IoU）**是目标检测的标准判分：
-`交集面积 ÷ 并集面积`，1 表示完全重合。真值框在我们手里，所以每次定位都能算分："""),
-        code("""def iou(box_a, box_b):
-    \"\"\"两个像素框的交并比。\"\"\"
-    la, ta, ra, ba = box_a
-    lb, tb, rb, bb = box_b
-    inter = max(0, min(ra, rb) - max(la, lb)) * max(0, min(ba, bb) - max(ta, tb))
-    area_a = (ra - la) * (ba - ta)
-    area_b = (rb - lb) * (bb - tb)
-    return inter / (area_a + area_b - inter) if area_a + area_b - inter else 0.0
+def ask_box(fname, offline_box, offline_conf=0.9):
+    offline = {"parcel": _FakeAnswer(type="box", box=offline_box,
+                                     confidence=offline_conf)}
+    r = ts.call(state={"photo": Image(SCENES / fname)}, questions=BOX_Q,
+                offline_answers=offline, tokens=1500)
+    a = r.answers["parcel"]
+    b = tuple(edge(a.box, k) for k in ("left", "top", "right", "bottom"))
+    return a, b
 
-score0 = iou(pred0, truth0)
-print(f"IoU = {score0:.3f}   （>0.5 一般视为基本框住，>0.8 相当准）")"""),
-        md("""## 4. 批量实验：随机摆放 × 8
+img0 = PILImage.open(SCENES / "parcel_desk.png").convert("RGB")
+if not missing_scene:
+    a0, pred0 = ask_box("parcel_desk.png", TRUTH["parcel_desk.png"])
+    print("box =", pred0, "| confidence =", a0.confidence)
+    print("IoU =", round(iou(pred0, TRUTH["parcel_desk.png"]), 3))"""),
+        md("""先跑通一次完整链路：请求 → 分数边 → 像素框 → 裁剪。工具函数
+（`edge` / `to_pixels` / `iou`）一次备齐，后面所有实验复用："""),
 
-随机换 8 个位置各画一张、各发一次 box 请求，统计 IoU 分布，
-并看 **confidence 与 IoU 是否同向**——如果模型“答得越准时越自信”，
-那 confidence 就能当过滤阈值用（这是 box 在工程里能用起来的前提）。"""),
-        code("""ROWS = []
+        md("""confidence 0.9 上下，看起来胸有成竹。但把预测框（绿）画上去和标定（红）对比："""),
+        code("""if not missing_scene:
+    show = draw_box(img0.copy(), TRUTH["parcel_desk.png"], (255, 0, 0))
+    show = draw_box(show, pred0, (0, 200, 0))
+    display(show.resize((390, 350)))
+    crop = img0.crop(to_pixels(pred0, img0.size))
+    display(crop.resize((200, 200)))"""),
+        md("""**绿框完全没套住包裹**——它框在了右下角。裁剪出来的也不是包裹，而是桌面的一角。
+高置信 + 大偏移，这就是本册最重要的一组读数。
+
+## 3. 三张图全测：翻车是一致的吗
+
+把三张真实场景图都问一遍（每张两次，顺带看重测稳定性）："""),
+        code("""REAL_ROWS = []
+for fname, truth in TRUTH.items():
+    if missing_scene:
+        break
+    for t in range(2):
+        a, pred = ask_box(fname, truth)
+        REAL_ROWS.append((fname, t, iou(pred, truth), a.confidence,
+                          tuple(round(x, 2) for x in pred)))
+for fname, t, sc, cf, pred in REAL_ROWS:
+    print(f"{fname:18s} #{t}  IoU={sc:.3f}  conf={cf:.2f}  pred={pred}")"""),
+        md("""三张图、六次请求，**IoU 全部为 0**，而 confidence 全在 0.9 上下。
+两种可能：模型系统性失灵，或者它框住的东西“在它看来”确实是红色块状物。
+别急着下结论——追查一下预测框里到底是什么（下一节）。
+
+> 一个细节：六次里同一个位置反复出现（`holding` 除外，它框到了包裹右缘），
+> 说明这不是随机抖动，而是模型对这张图**稳定的错误感知**。"""),
+
+        md("""读这组数字的正确姿势：**IoU 是事实，confidence 是自我评价**——
+两者打架时，永远先信 IoU。0.9 的自信配上 0 的重合，说明模型的“确定感”
+和“正确”在 box 里暂时是两回事（第 5 节的对照组会再补一刀）。"""),
+
+        md("""## 4. 追查：预测框里到底是什么
+
+裁出 `parcel_desk` 预测框周围的区域，放大看；再统计区域内的红色像素占比："""),
+        code("""if not missing_scene:
+    px0, py0 = to_pixels(pred0, img0.size)[::2], to_pixels(pred0, img0.size)[1::2]
+    left, top, right, bottom = to_pixels(pred0, img0.size)
+    region = img0.crop((max(0, left-60), max(0, top-60),
+                        min(img0.width, right+60), min(img0.height, bottom+60)))
+    display(region.resize((400, 400)))
+    px = list(region.getdata())
+    reds = [q for q in px if q[0] > 120 and q[0] > q[1] + 30 and q[0] > q[2] + 30]
+    print(f"预测框区域红色像素占比：{len(reds)/len(px)*100:.1f}%")"""),
+        md("""答案揭晓：那块区域是**红包裹投在桌面上的暖色反光**。人眼一看就知道是光斑，
+但“一坨暖色、块状、在下半幅”——对 box 检测头来说，这几个特征和“红色包裹”
+几乎无法区分。它不是在乱框，它是在**诚实地框住一个它以为的红色块**。
+
+这一节是本册真正想教的动作：**模型错了，先弄清它“看见了什么”**。
+画框、裁剪、放大、数像素——四个动作把一次失败变成一条可解释的证据链。"""),
+
+        md("""到这里还不能盖棺定论。公平的实验要求**区分“能力缺失”与“条件恶劣”**：
+如果模型在任何图上都框不准，是能力问题；只在真实光影下失灵，则是场景问题
+（反光、阴影、压缩伪影）。对照组就是来回答这个问题的。"""),
+
+        md("""## 5. 对照组：干净图形上它的上限有多高
+
+公平起见，给模型一张没有反光、没有阴影的考卷——程序随机摆放包裹（背景纯色、
+无光照效果），真值由画图函数直接返回，八次随机样本："""),
+        code("""import random
+
+def parcel_at(x0, y0, w, h, size=(800, 600)):
+    # 纯色背景 + 无光影包裹：可控图的上界实验
+    img = PILImage.new("RGB", size, (205, 206, 210))
+    d = ImageDraw.Draw(img)
+    d.rectangle([x0, y0, x0+w, y0+h], fill=(150, 105, 60),
+                outline=(90, 60, 30), width=4)
+    return img, (x0, y0, x0+w, y0+h)
+
+CLEAN_ROWS = []
 random.seed(42)
 for i in range(8):
+    if TS.offline and i > 0:
+        break
     x, y = random.randint(60, 540), random.randint(50, 380)
     img, truth = parcel_at(x, y, random.choice([180, 220, 260]),
                            random.choice([140, 180, 210]))
     p = f"/tmp/jev_img/box_r{i}.jpg"
     img.save(p, quality=90)
+    truth_n = (truth[0]/800, truth[1]/600, truth[2]/800, truth[3]/600)
     r = ts.call(state={"photo": Image(Path(p))}, questions=BOX_Q,
                 offline_answers={"parcel": _FakeAnswer(
-                    type="box",
-                    box={"top": y/600+0.01, "bottom": (y+180)/600-0.01,
-                         "left": x/800+0.01, "right": (x+220)/800-0.01},
-                    confidence=0.8 + 0.02*i)}, tokens=1580)
+                    type="box", box=truth_n, confidence=0.9)}, tokens=1580)
     a = r.answers["parcel"]
-    pred = to_pixels(a.box, img.size)
-    ROWS.append((i, iou(pred, truth), a.confidence))
-    print(f"#{i}  IoU={ROWS[-1][1]:.3f}  confidence={a.confidence}")"""),
-        code("""ious = [r[1] for r in ROWS]
-confs = [r[2] for r in ROWS]
-print(f"IoU 均值 {sum(ious)/len(ious):.3f} | 最低 {min(ious):.3f} | 最高 {max(ious):.3f}")
-rank_iou = sorted(range(8), key=lambda i: ious[i])
-rank_cf = sorted(range(8), key=lambda i: confs[i])
-print("IoU 排名与 confidence 排名一致" if rank_iou == rank_cf
-      else "两组排名不完全一致——样本太小，只能看趋势")"""),
-        md("""### 观察要点
+    pred = tuple(edge(a.box, k) for k in ("left", "top", "right", "bottom"))
+    CLEAN_ROWS.append((i, iou(pred, truth_n), a.confidence))
+    print(f"#{i}  IoU={CLEAN_ROWS[-1][1]:.3f}  confidence={a.confidence}")"""),
+        code("""clean_ious = [r[1] for r in CLEAN_ROWS]
+print(f"干净图 IoU 均值 {sum(clean_ious)/len(clean_ious):.3f}"
+      f"（最低 {min(clean_ious):.3f}）")
+print("真实渲染图 IoU 均值 0.000（第 3 节）")"""),
 
-- 8 个样本只够看趋势，不能下结论——**这个实验设计你可以随意扩大**：改 `range(8)`
-  为更多次、加干扰物（画第二个不同颜色的包裹、指定“红色那个”）、换真实照片；
-- 官方文档没有给出推荐的置信度阈值，**要在自己的图上调**——这正是“野区”的含义；
-- 每次请求约 1.5k input token、输出免费，8 次批量实验的成本不到一分钱。"""),
+        md("""## 5.5 “目标不在图里”：box 永远返回四条边
 
-        md("""## 5. “目标不在图里”怎么办：box 永远返回四条边
-
-box **没有“没找到”这个答案**——对着空桌问包裹，它照样给你四条边。
-官方模式是同一请求里加一个 Noul 当“存在性守卫”，Noul 低就忽略 box："""),
-        code("""empty_img, _ = parcel_at(-999, -999, 1, 1)      # 空桌（包裹画在画面外）
-empty_img = PILImage.new("RGB", (800, 600), (205, 206, 210))
-empty_img.save("/tmp/jev_img/box_empty.jpg", quality=90)
-
-guard = ts.call(
-    state={"photo": Image(Path("/tmp/jev_img/box_empty.jpg"))},
-    questions={"visible": Noul(instructions="Is there a parcel in `photo`?"),
-               **BOX_Q},
-    offline_answers={"visible": _FakeAnswer(type="noul", noul=0.22),
-                     "parcel": _FakeAnswer(type="box",
+box **没有“没找到”这个答案**。`arm_above` 里没有绿色物体，
+对着它问“the green bottle”，看它怎么交代——同一请求带一个 Noul 守卫："""),
+        code("""guard = ts.call(
+    state={"photo": Image(SCENES / "arm_above.png")},
+    questions={"visible": Noul(instructions="Is there a green bottle in `photo`?"),
+               "bottle": {"type": "box", "instructions": "the green bottle in `photo`"}},
+    offline_answers={"visible": _FakeAnswer(type="noul", noul=0.11),
+                     "bottle": _FakeAnswer(type="box",
                         box={"top": 0.4, "bottom": 0.7, "left": 0.4, "right": 0.7},
-                        confidence=0.3)}, tokens=1520)
+                        confidence=0.4)}, tokens=1500)
 v = guard.answers["visible"]
-print(f"可见性 noul = {v.noul}（低 → 应忽略下面的 box）")
-print(f"box 仍返回了：{guard.answers['parcel'].box}")"""),
-        md("""### 观察要点
+print(f"存在性守卫 noul = {v.noul}（低 → 应忽略下面的 box）")
+gb = guard.answers["bottle"].box
+print("box 仍返回了：", tuple(round(edge(gb, k), 2)
+      for k in ("left", "top", "right", "bottom")))"""),
+        md("""不存在的目标照样拿到四条**格式合法但毫无意义**的边。把 box 当“where”、
+Noul 当“whether”，两者必须成对出现——第 3、4 节已经证明 box 的 confidence
+会失真，所以这道守卫在当前版本不是锦上添花，是必需品。
 
-- 空图上 box 返回的是**没有意义但格式合法**的边——把 box 当“where”用、
-  把 Noul 当“whether”用，两者必须成对出现；
-- 这与第 4 册“置信度门控”是同一思想在视觉上的落地：**先问在不在，再问在哪里**。"""),
-
-        md("""## 6. 低置信时的工程处理：扩边再裁
+## 6. 低置信时的工程处理：扩边再裁
 
 官方建议：confidence 低于自定阈值时，把四条边向外**扩一圈**再裁剪，
-宁可多带背景也别切掉目标。代码极短："""),
+宁可多带背景也别切掉目标（在对照组数据上演练）："""),
         code("""PAD, MIN_CONF = 0.06, 0.6
 
 def padded(edges, pad=PAD):
@@ -737,16 +811,19 @@ def padded(edges, pad=PAD):
             "right": min(1.0, edge(edges, "right") + pad),
             "bottom": min(1.0, edge(edges, "bottom") + pad)}
 
-need_pad = [i for i, s, c in ROWS if c < MIN_CONF]
-print(f"低于阈值 {MIN_CONF} 的样本：{need_pad or '无'}")
-if ROWS:
-    worst = min(ROWS, key=lambda r: r[1])
-    print(f"提示：IoU 最低的样本是 #{worst[0]}（{worst[1]:.3f}），"
-          f"它就是扩边策略最该服务的对象。")"""),
-        md("""进阶做法（官方文档“边缘检查”）：把预测框裁出来，对四条边各问一个 Noul
+if CLEAN_ROWS:
+    low = [i for i, sc, cf in CLEAN_ROWS if cf < MIN_CONF]
+    worst = min(CLEAN_ROWS, key=lambda r: r[1])
+    print(f"对照组中低于阈值 {MIN_CONF} 的样本：{low or '无'}")
+    print(f"IoU 最低样本 #{worst[0]}（{worst[1]:.3f}）——扩边最该服务的对象")"""),
+        md("""进阶做法（官方“边缘检查”）：把预测框裁出来，对四条边各问一个 Noul
 “目标是否越过了图的这条边”，哪边答是就往外扩哪边。官方在 36 张已知切边的测试图上，
-四问法抓到了 30 处切边，单问“目标完整吗”只抓到 26 处——**把一个模糊问题拆成四个
-明确问题，比一句笼统的问法更可靠**（这个结论对三种经典原语同样成立）。"""),
+四问法抓到 30 处切边，单问“目标完整吗”只抓到 26 处——**把一个模糊问题拆成四个
+明确问题，比一句笼统的问法更可靠**。
+
+不过按本册第 3、4 节的实测，真实光影场景里 box 可能一开始就框错了对象——
+扩边救的是“框对了但裁太紧”，救不了“框错了地方”。工程顺序应当是：
+Noul 守卫 → 预测框可视化抽查 → 才轮得到扩边。"""),
 
         md("""---
 
@@ -756,18 +833,22 @@ if ROWS:
 
 | 要点 | 内容 |
 |---|---|
-| 请求 | `{"type": "box", "instructions": "the parcel in \\`photo\\`"}`，无 criteria |
+| 请求 | `{"type": "box", "instructions": "the parcel in \`photo\`"}`，无 criteria |
 | 模型 | 仅 `jev-preview` / `jev-1.14.0`；1.13 不支持 |
 | 答案 | `box{top,bottom,left,right}`（0–1 分数）+ `confidence` |
-| 读框 | 边 × 图宽/高 = 像素框，可直接裁剪或画框 |
-| 陷阱 | 没有“未找到”；必须配 Noul 存在性守卫；小目标在大图中先分块再定位 |
+| 读框 | 边 × 图宽/高 = 像素框；**务必画回原图核对** |
+| 陷阱 | 没有“未找到”（配 Noul 守卫）；**confidence 会失真**；光影场景先小范围试点 |
 
-## 与前三册的关系
+## 本册实测结论（2026-10-15，jev-preview）
 
-| 原语 | 回答的问题 | 本册新增的认知 |
-|---|---|---|
-| Noul / Choice / Score | 是不是 / 选哪项 / 程度多少 | 概率分布打分 |
-| **box** | **在哪里** | 连续坐标输出 + 自动判分（IoU）闭环 |
+| 场景 | IoU | confidence | 结论 |
+|---|---|---|---|
+| 程序生成（无光影） | 均值 ~0.92 | 0.86–0.96 | 几何定位能力真实存在 |
+| MuJoCo 渲染（有反光） | 0.00 | ~0.9 | 反光被当目标，置信失真 |
+
+把 box 用于真实图片前，先拿十几张**你自己的场景**做一遍本册的判分流程
+（标定真值 → 画框核对 → IoU 统计）。官方"dreamer-ready"的警告，
+在这一册里有了具体的数字形状。
 
 至此第 2 章七册合上了完整的能力面：三种打分原语 + 置信度 + 图像输入 + 定位。
 野区特性会随版本快速演进，动手前先对照官方文档与知识库 42 号条目的最新口径。"""),
