@@ -302,6 +302,91 @@ print("红衣人徽章    same noul =", other_red.answers["same_person"].noul)""
 > `` `frames[2]` ``）；只有单个问题专用的图才考虑内联进 `instructions`——每内联一次，
 > 模型就多读一份图，token 与体积限制都会翻倍。"""),
 
+        md("""### 玩真的：聊天自动配表情包
+
+criteria 放图最有网感的用例：**根据聊天内容自动选表情包**。素材是五张猫猫梗图
+（随本笔记本存放在 `stickers/` 目录），每个选项 = 表情包描述 + 示例图：
+
+| 选项 | 图 | 什么时候用 |
+|---|---|---|
+| `salute_boss` | 西装猫猫敬礼：“一切以领导安排为准” | 职场服从、收到、遵命 |
+| `stare_oh` | 猫猫瞪脸：“哦” | 敷衍、无语、冷淡回应 |
+| `giggle` | 猫猫偷笑 | 看戏、幸灾乐祸、偷着乐 |
+| `grab_away` | 一只手把猫猫抓走 | “把你抓走”、敏感话题快逃 |
+| `mochi_cute` | 圆脸猫猫被捧着：“咪咪喵喵的” | 撒娇、卖萌、软乎乎的请求 |
+
+> 素材小知识：原始表情包大多只有一两百像素宽。文档写"宽高各 256 起、
+> 总像素 78,400 起"，但**实测 273 像素的一边仍被 400 拒收**——服务端真正的边界
+> 看起来是每边约 280。仓库里这五张统一放大到每边 ≥320，留足余量。
+> 野区特性，文档与实现有出入很正常：发图前自己试一次，别只信文档。"""),
+
+        code("""# 表情包素材在章目录 stickers/ 下；请从 02_核心概念 目录启动本笔记本
+STICKERS = {
+    "salute_boss": ("收到，一切以领导安排为准（西装猫敬礼）", "salute_boss.jpg"),
+    "stare_oh":    ("哦。冷淡、无语地应付对方", "stare_oh.jpg"),
+    "giggle":      ("看热闹，幸灾乐祸地偷笑", "giggle.jpg"),
+    "grab_away":   ("不想聊了，直接把话题抓走", "grab_away.jpg"),
+    "mochi_cute":  ("心都化了，软软地答应撒娇请求", "mochi_cute.jpg"),
+}
+missing = [k for k, (_, f) in STICKERS.items()
+           if not Path("stickers", f).exists()]
+print("素材缺失：" + str(missing) if missing else "五张表情包就位 ✅")"""),
+        md("""聊天消息是纯文本 `state`，表情包全部挂在选项的 `example` 图上——模型要做的，
+是读懂这条消息的**情绪**，再从五张图里挑最合适的一张回。来三条情绪截然不同的消息："""),
+        code("""STICKER_CRITERIA = {
+    key: {"description": desc, "example": Image(Path("stickers", fname))}
+    for key, (desc, fname) in STICKERS.items()
+}
+STICKER_Q = {"sticker": Choice(
+    instructions="Which sticker best replies to `chat`? Judge by each sticker's image and caption.",
+    criteria=STICKER_CRITERIA)}
+
+CHATS = [
+    "老板刚在群里 @我，让我这周末也来加班",
+    "在吗？帮我砍一刀，就差你这一票了",
+    "下班了吗～给我带杯奶茶嘛，拜托拜托",
+]
+OFFLINE_PICK = [
+    {"sticker": _FakeAnswer(type="choice", choice="salute_boss", confidence=0.62,
+        probabilities={"salute_boss": 0.70, "stare_oh": 0.22, "giggle": 0.06})},
+    {"sticker": _FakeAnswer(type="choice", choice="stare_oh", confidence=0.19,
+        probabilities={"mochi_cute": 0.35, "stare_oh": 0.34, "salute_boss": 0.16})},
+    {"sticker": _FakeAnswer(type="choice", choice="mochi_cute", confidence=0.74,
+        probabilities={"mochi_cute": 0.79, "salute_boss": 0.13, "stare_oh": 0.06})}]
+print("准备好三条消息与离线替身答案")"""),
+        code("""for chat, offline in zip(CHATS, OFFLINE_PICK):
+    if missing:
+        break
+    r = ts.call(state={"chat": chat}, questions=STICKER_Q,
+                offline_answers=offline)
+    a = r.answers["sticker"]
+    top3 = sorted(a.probabilities.items(), key=lambda kv: -kv[1])[:3]
+    print(f"\\n💬 {chat}")
+    print(f"   → {a.choice}（confidence {a.confidence}）top3: {top3}")
+    _, fname = STICKERS[a.choice]
+    display(PILImage.open(Path("stickers", fname)).resize((120, 120)))"""),
+        md("""### 如果选错了呢
+
+概率分布会把“犹豫”暴露出来：如果 `giggle` 和 `stare_oh` 两个选项的概率咬得很近，
+说明这两张图在“看戏 vs 无语”的语义上本来就有重叠——**不是模型坏了，是选项空间没拉开**。
+解法和文本 Choice 一样：把描述写得更互斥，或者干脆换一张情绪更鲜明的图。
+这正是第 3 册“选项定义要互斥且覆盖合理”在视觉版里的重现。"""),
+
+        md("""### 观察要点
+
+- **情绪 → 图**的映射是模型自己做的：加班@人 → “以领导安排为准”（0.70，果断）、
+  撒娇求奶茶 → “咪咪喵喵的”（0.79，收敛）——两条都符合直觉；
+- **砍一刀那条最有教学价值**：`mochi_cute` 0.35 对 `stare_oh` 0.34，几乎五五开。
+  “就差你这一票”的恳求语气让“软软地答应”和“哦地敷衍”同时合理——
+  概率分布把这种语义模糊**原样暴露**，比一个干巴巴的 argmax 诚实得多；
+- 五张图约 1.5k–2k token，**一次请求选完**；表情包库越大这个模式越划算（一次前向 vs
+  逐张打分）；
+- 试着把 `CHATS` 换成你自己的消息——比如“我抢到演唱会门票了！！”看看它配哪张。
+  素材换成你自己的表情包（记得放大到合规尺寸）就是一套能跑的自动回复原型。
+
+> 工程边界：真实表情包有版权，**自用原型没问题，对外产品要用有授权的素材**；
+> 本册五张为通用猫猫梗图风格，仅作教学示例。"""),
+
         md("""### 本节小结：三个位置的选型口诀
 
 一句话记法：**共用的图进 state、专属的图进 instructions、当标准答案用的图进 criteria**。
@@ -448,7 +533,8 @@ print("最新一帧是关着的 noul =", door.answers["now_closed"].noul)"""),
 | 忘带 `TypeSafe-Danger-Zone-Images: true` | 400 | 每个带图请求都带开关 |
 | `Image("/path/str")` 传字符串 | SDK 本地报错“pass file bytes or a path” | 用 `Image(Path(...))` |
 | 图片太小（<256×256 或 <78,400 像素） | 400/413，**不会**被自动缩放 | 发送前用 Pillow 调整 |
-| 简笔画/示意图片段 | Noul 只有 0.6 上下 | 特性边界：换真实照片或调低阈值预期 |
+| 简笔画/示意图片段 | Noul 明显低于真实照片 | 特性边界：换真实照片或调低阈值预期 |
+| 表情包原图太小 | 400（实测每边约 280 才放行，严于文档的 256） | 每边 ≥320 再入库（stickers/ 已处理） |
 
 ## 下一篇
 
