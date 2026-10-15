@@ -292,5 +292,12 @@
     "title": "Jev 驱动数字人动作",
     "group": "应用与 Agent 工程",
     "summary": "open-annie 把表情手势交给 Jev：118ms 延迟、置信度门控与规则兜底。"
+  },
+  {
+    "directory": "42-jev-1-14",
+    "slug": "42-jev-1-14",
+    "title": "Jev 1.14.0 与危险区",
+    "group": "模型原理与训练",
+    "summary": "多模态解锁、box 类型、262k 上下文与首次公开的内部评测。"
   }
 ]

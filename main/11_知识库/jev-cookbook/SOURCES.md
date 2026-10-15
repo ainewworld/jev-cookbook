@@ -44,6 +44,7 @@
 | `39-microsoft-decision-1/` | [Microsoft Command Line「Introducing Microsoft-Decision-1」](https://commandline.microsoft.com/microsoft-decision-1-model-foundry/)（发布文全译，含 3 段官方演示视频） | `文章快照 2026-10-10` | 5 |
 | `40-embodied-jev/` | [GitHub FBddcz/embodied-jev README](https://github.com/FBddcz/embodied-jev)（整理编译，重点 Jev 应用与实测） | `仓库快照 2026-10-10` | 6 |
 | `41-open-annie-jev-avatar/` | [微信公众号「AI for Frontend」Jev 驱动数字人动作解读](https://mp.weixin.qq.com/s/jbE13suqK7C8rnlBDqj6uQ)（整理收录，解读 rehan-remade/open-annie） | `文章快照 2026-10-10` | 1 |
+| `42-jev-1-14/` | [TypeSafe 官方博客「For the builders AND dreamers」](https://typesafe.ai/blog/jev-1-14) + [CEO @CompleteSkeptic 发布推文串](https://x.com/CompleteSkeptic/status/2110488924309348860)（双源合成） | `文章快照 2026-10-14` | 7 |
 | `laya-model/` | [NandhaKishorM/laya](https://github.com/NandhaKishorM/laya) | `本地接口快照 2026-09-23；模型卡 2026-09-20` | 8 |
 
 ## 收录原则
