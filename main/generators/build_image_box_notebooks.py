@@ -331,6 +331,31 @@ STICKERS = {
 missing = [k for k, (_, f) in STICKERS.items()
            if not Path("stickers", f).exists()]
 print("素材缺失：" + str(missing) if missing else "五张表情包就位 ✅")"""),
+        md("""素材长什么样，先亲眼看一遍——**给模型看的图，自己也得看过**，
+不然排查“为什么选错”时无从下手。五张拼成一张预览图，选项名标在每张下方："""),
+        code("""def sticker_preview():
+    # 五张表情包拼一张横排预览（标签用选项名，避免中文字体问题）
+    thumbs = []
+    for key, (_, fname) in STICKERS.items():
+        im = PILImage.open(Path("stickers", fname)).convert("RGB")
+        im.thumbnail((150, 150))
+        thumbs.append((key, im))
+    cell_w = max(im.width for _, im in thumbs) + 12
+    canvas = PILImage.new("RGB", (cell_w * len(thumbs), 200), (246, 246, 248))
+    from PIL import ImageDraw
+    d = ImageDraw.Draw(canvas)
+    for i, (key, im) in enumerate(thumbs):
+        x = i * cell_w + 6
+        canvas.paste(im, (x, 6))
+        d.text((x + 6, 168), key, fill=(40, 44, 60))
+    return canvas
+
+if not missing:
+    display(sticker_preview())"""),
+        md("""怎么读这张预览：**每张图 = 一个选项的“标准答案”**。模型收到聊天消息后，
+做的事就是在五张图和它们的文字描述里找情绪最匹配的一张——你也可以先自测一遍：
+遮住下一节的输出，想想三条消息各自该配哪张，再和模型的选择对比。
+人和模型的选择分歧本身就很有聊头。"""),
         md("""聊天消息是纯文本 `state`，表情包全部挂在选项的 `example` 图上——模型要做的，
 是读懂这条消息的**情绪**，再从五张图里挑最合适的一张回。来三条情绪截然不同的消息："""),
         code("""STICKER_CRITERIA = {
