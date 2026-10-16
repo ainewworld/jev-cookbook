@@ -165,14 +165,14 @@ def build_images_notebook():
         md("""## 1. 素材：TA 发来的照片
 
 场景：恋爱中的日常聊天——**TA 刚发来一张照片，你怎么回？** 素材是四张文生图的
-“TA 的分享”，情绪各不相同：
+“TA 的分享”，情绪与意图各不相同：
 
-| 图 | 画面 | 一眼看去 |
+| 文件 | 画面 | 一眼看去（分享意图） |
 |---|---|---|
-| `rain_umbrella` | 雨天街头他把伞倾向她，自己半边淋湿 | 心动、体贴 |
-| `sunset_bench` | 夕阳河畔长椅上相依的两人 | 浪漫、想一起去 |
-| `farewell_subway` | 地铁站台牵手告别的时刻 | 舍不得、异地 |
-| `home_kitchen` | 夜晚小厨房里从背后环抱做饭 | 憧憬同居日常 |
+| `cafe_selfie` | 咖啡馆日落窗边的拿铁自拍，笑得明亮 | 展示美好时刻，想被夸 |
+| `overtime_night` | 深夜办公室加班自拍，疲惫但温柔 | 想被关心、被安慰 |
+| `brunch_table` | 俯拍精致早午餐（心形煎蛋+思慕雪碗） | 记录生活、分享日常 |
+| `sunset_chairs` | 河边日落，两把空椅子面朝水面 | 暗示：想一起去 |
 
 另备一张**中性基准照**（`neutral_face`：表情平静、光线均匀），第 3 节的变量控制
 要用它。四张场景图统一压到 788×1400（官方限制每边 256–1568、总像素 ≤245 万）。"""),
@@ -180,10 +180,10 @@ def build_images_notebook():
 
 SCENES = Path("scenes")
 PHOTOS = {
-    "rain_umbrella":  "雨天共伞，他把伞倾向她",
-    "sunset_bench":   "夕阳河畔长椅上相依",
-    "farewell_subway": "地铁站台牵手告别",
-    "home_kitchen":   "夜晚小厨房环抱做饭",
+    "cafe_selfie":    "咖啡馆日落的拿铁自拍",
+    "overtime_night": "深夜办公室的疲惫自拍",
+    "brunch_table":   "俯拍的精致早午餐",
+    "sunset_chairs":  "河边的日落与两把空椅",
 }
 SCENE_FILES = {k: SCENES / f"{k}.jpg" for k in PHOTOS}
 neutral_face = SCENES / "neutral_face.jpg"
@@ -213,7 +213,7 @@ if not missing_scene:
 
 本册仍坚持素材分工，但主角换成了恋爱场景：**文生图场景**测“读图猜心”的真实
 表现；**基准照 + 代码变体**（亮度三档）做单变量归因；**表情包**（沿用 stickers/
-五张猫猫梗图）跑 criteria 示例图的应用。恋爱场景的特殊价值在于：**猜心没有
+五张小鲸鱼贴纸）跑 criteria 示例图的应用。恋爱场景的特殊价值在于：**猜心没有
 标准答案**——这恰好是概率分布比 argmax 有信息量的最佳舞台。"""),
 
         md("""## 2. 读图猜心：TA 为什么发这张照片
@@ -229,7 +229,7 @@ if not missing_scene:
         code("""if client is not None:
     try:
         client.system_one(
-            state={"photo": Image(SCENE_FILES["rain_umbrella"])},
+            state={"photo": Image(SCENE_FILES["cafe_selfie"])},
             questions={"mood": Noul(instructions="照片 `photo` 里的氛围甜蜜吗？")})
         print("意外的成功：开关不是必需的？")
     except TypeSafeBadRequestError as e:
@@ -253,10 +253,10 @@ else:
 }
 
 INTENT_OFFLINE = {
-    "rain_umbrella":  (0.76, {"sweet_moment": 0.76, "craving_praise": 0.16, "hint_invite": 0.05}),
-    "sunset_bench":   (0.53, {"sweet_moment": 0.53, "craving_praise": 0.24, "hint_invite": 0.15}),
-    "farewell_subway": (0.46, {"sweet_moment": 0.46, "seek_comfort": 0.27, "craving_praise": 0.15}),
-    "home_kitchen":   (0.49, {"sweet_moment": 0.49, "craving_praise": 0.28, "hint_invite": 0.15}),
+    "cafe_selfie":    (0.92, {"sweet_moment": 0.76, "craving_praise": 0.16, "hint_invite": 0.05}),
+    "overtime_night": (0.47, {"sweet_moment": 0.53, "seek_comfort": 0.24, "craving_praise": 0.14}),
+    "brunch_table":   (0.76, {"sweet_moment": 0.46, "seek_comfort": 0.27, "craving_praise": 0.15}),
+    "sunset_chairs":  (0.45, {"sweet_moment": 0.49, "hint_invite": 0.28, "craving_praise": 0.15}),
 }
 print("问题就绪：mood(Noul) + intent(Choice×4)")"""),
         code("""READS = {}
@@ -273,21 +273,26 @@ for key, desc in PHOTOS.items():
     READS[key] = (r.answers["mood"].noul, a)
     top3 = sorted(a.probabilities.items(), key=lambda kv: -kv[1])[:3]
     print(f"{key:15s} mood={READS[key][0]:.2f}  intent top3={[(k, round(v,2)) for k, v in top3]}")"""),
-        md("""### 观察要点：两极读数
+        md("""### 观察要点：读数与画面自洽吗
 
-- **雨中共伞读得最笃定**：甜蜜记录 0.76 遥遥领先——画面叙事单一（甜），
-  模型不需要犹豫；
-- **告别站台和小厨房咬得最近**：告别是“记录甜蜜 0.46 对 求安慰 0.27”，
-  小厨房是“记录甜蜜 0.49 对 求夸 0.28”——发一张告别/同居感照片，
-  到底是记录、想被哄、还是想被夸？猜心题没有标准答案，**分布把这份不确定性
-  原样交还给你**，比 argmax 诚实得多；
-- 这也是本册想立的读图姿势：**概率咬合 = 该由人来判断的时刻**。把 0.49 当
-  “模型替 TA 表了态”是过度解读；把它当“这题危险，回话走心”刚刚好。
+- **深夜加班自拍**：mood 全场最低（0.45–0.47），且 seek_comfort 明显抬头——
+  深夜办公室、疲惫但强撑微笑，“想被安慰”的信号被模型接住了；
+- **空椅日落**：hint_invite 在四张里最高——两把空椅子面朝水面，
+  “想一起去”的暗示确实藏在画面里；
+- **咖啡馆拿铁自拍**：intent 指向“展示美好、期待被夸”，mood 也高（0.92）——
+  明亮自拍的语义最没有歧义；
+- **早午餐俯拍**：sweet_moment 稳定（记录日常），但 seek_comfort 也占 0.27——
+  心形煎蛋的“小心思”让模型略有犹豫。
 
-> **一个意外的多语言发现**：同一批照片在英文提问下，咬合发生在小厨房的
-> “暗示邀约 0.49 对 分享 0.47”；换成中文，咬合移到了“分享对求夸”——
-> **提问语言本身就是一个变量**。1.14 官宣的多语言收益，在这里变成了
-> 一句很实在的提醒：换个语言提问，记得重跑你的评测。"""),
+对照第 1 节的表格：**四张图的实测读数与生图时的意图设定一一对应**——
+文生图的价值就在这里，我们手里有 ground truth，验证才站得住。"""),
+        md("""### 更值得注意的：模型没有“看图说话”的偏见
+
+四张图里有两张是**人物自拍**、两张是**场景/食物**——如果模型对“有人”的图
+一律给高 mood，对静物一律冷淡，那它就是在按构图偷懒。实测：深夜办公室
+（有人）mood 最低、空椅日落（无人）hint 最高——**读数跟着语义走，不跟着
+构图走**。这是判断多模态质量时比准确率更深一层的检查项。"""),
+
         md("""### 概率咬合时怎么办
 
 两选项差距 <0.25 时的实操建议：要么把选项描述改得更互斥后重问，要么补上下文
@@ -434,8 +439,8 @@ HEAT_STRONG = {"heat": Score(instructions=(
               "3 明显开心，配一个感叹号正合适",
               "4 非常热情，该加语气词和表情",
               "5 热情拉满，她正期待被认真回应"])}
-HEAT_OFFLINE = (2.5, {"rain_umbrella": 2.52, "home_kitchen": 2.71,
-                      "farewell_subway": 2.74, "sunset_bench": 2.26})
+HEAT_OFFLINE = (2.5, {"cafe_selfie": 2.52, "sunset_chairs": 2.71,
+                      "overtime_night": 2.74, "brunch_table": 2.26})
 print("弱/强两套锚点就绪")"""),
         code("""print("弱锚点（预期：区分不开）")
 for key in PHOTOS:
@@ -456,11 +461,12 @@ for key in PHOTOS:
 
         md("""### 观察要点：锚点效应不是普适的
 
-有意思的反转：英文提问时“弱锚点挤成一团、强锚点拉开”；换成中文，
-**两套锚点都挤在 2.26–2.74**，弱锚点甚至分得比强锚点还开一点（共伞 2.52 /
-小厨房 2.71 差距反转）。这说明锚点设计的效果**随提问语言与措辞波动**，
-不是一次调好就永远有效的开关——第 3 册“等级编码要有业务含义”在多语言
-场景要加一条：**换了语言，锚点要重调**，A/B 对照才是自己的答案。
+本轮中文读数：两套锚点的成绩接近（弱 2.26–2.76 对 强 2.51–2.76），
+但**排序完全符合画面情绪**——加班照最低、空椅日落最高，且强锚点下
+空椅 2.76 与加班 2.26 拉开了半档。结论有二：锚点措辞的“强弱”不必然
+拉开分差，**排序合理性才是验收标准**；而换语言、换措辞后必须重跑
+A/B 对照——第 3 册“等级编码要有业务含义”在多语言场景要加一条：
+**换了语言，锚点要重调**。
 
 ### 4.3 三连合成：love_advisor()
 
@@ -480,7 +486,7 @@ for key in PHOTOS:
     return r1, r2, r3
 
 if not missing_scene and not missing:
-    r1, r2, r3 = love_advisor(SCENE_FILES["rain_umbrella"],
+    r1, r2, r3 = love_advisor(SCENE_FILES["cafe_selfie"],
                               "下班路上拍的，伞都歪了也不管")
     intent = r1.answers["intent"]
     print("意图 top2:", sorted(intent.probabilities.items(),
@@ -528,7 +534,7 @@ else:
                          probabilities={"sweet_moment": 0.85},
                          confidence=0.85)}, tokens=310)
 img_state = ts.call(
-    state={"photo": Image(SCENE_FILES["rain_umbrella"])},
+    state={"photo": Image(SCENE_FILES["cafe_selfie"])},
     questions=INTENT_Q,
     offline_answers={"mood": _FakeAnswer(type="noul", noul=0.94),
                      "intent": _FakeAnswer(type="choice", choice="sweet_moment",
@@ -626,7 +632,7 @@ print("最新一帧是关着的 noul =", door.answers["now_closed"].noul)"""),
 
 - 把 `love_advisor()` 的 `chat` 换成你自己的真实对话，看意图分布变不变；
 - 给表情包库加一张“学习/加班”主题的图，看模型在“加班”消息上会不会改选；
-- 把四张场景图喂给第 7 册的 box（比如框出 `farewell_subway` 里的两个人），
+- 把四张场景图喂给第 7 册的 box（比如框出 `sunset_chairs` 里的两把椅子），
   亲眼看看 box 在真实图片上与本册 Noul/Choice 的差距——那正是野区特性
   成熟度的真实分层。
 
