@@ -158,192 +158,210 @@ def build_images_notebook():
 本册用 Pillow 现场绘制测试图（中文场景：小区门口的快递与访客），依次验证三种放图位置、
 帧序列状态、无开关时的 400 报错、图片尺寸限制与 token 消耗。所有图都是程序画的，
 因此每次运行的条件完全可复现。""",
-        feature="图像输入", model="jev-latest",
-        model_note="图像 1.13/1.14 都接受，用 `jev-latest` 即可。")
+        feature="图像输入", model="jev-1.14.0",
+        model_note="固定用 `jev-1.14.0`：本册全部问题都用**中文提问**，正好实测官方宣称的 1.14 多语言收益（1.13 也能吃图，但中文提示词建议直接上 1.14）。")
 
     cells += [
-        md("""## 1. 素材：真实感的分拣台场景图
+        md("""## 1. 素材：TA 发来的照片
 
-场景：仓库分拣台的相机。素材取自知识库 40 号条目（EmbodiedJev 行知工作台）的
-MuJoCo 物理渲染画面——灰桌面上一个红色包裹，上方是机械臂夹爪。原图是高清界面
-截图，我们裁出左侧场景区（780×700）存放在本册 `scenes/` 目录。
+场景：恋爱中的日常聊天——**TA 刚发来一张照片，你怎么回？** 素材是四张文生图的
+“TA 的分享”，情绪各不相同：
 
-用现成渲染图而不是手绘示意，原因是本册要**测模型在真实光影下的表现**：桌面反光、
-透视、阴影这些“脏东西”，恰恰是简笔画里没有、而真实部署里必然存在的。"""),
+| 图 | 画面 | 一眼看去 |
+|---|---|---|
+| `rain_umbrella` | 雨天街头他把伞倾向她，自己半边淋湿 | 心动、体贴 |
+| `sunset_bench` | 夕阳河畔长椅上相依的两人 | 浪漫、想一起去 |
+| `farewell_subway` | 地铁站台牵手告别的时刻 | 舍不得、异地 |
+| `home_kitchen` | 夜晚小厨房里从背后环抱做饭 | 憧憬同居日常 |
 
+另备一张**中性基准照**（`neutral_face`：表情平静、光线均匀），第 3 节的变量控制
+要用它。四张场景图统一压到 788×1400（官方限制每边 256–1568、总像素 ≤245 万）。"""),
         code("""from PIL import Image as PILImage, ImageDraw
 
 SCENES = Path("scenes")
-parcel_desk = SCENES / "parcel_desk.png"     # 红包裹静置桌面
-arm_above = SCENES / "arm_above.png"         # 夹爪移到包裹上方
-holding = SCENES / "holding.png"             # 包裹被夹爪抓起
-missing_scene = [p.name for p in (parcel_desk, arm_above, holding) if not p.exists()]
-print("场景素材缺失：" + str(missing_scene) if missing_scene
-      else "三张分拣台场景就位 ✅")"""),
-        md("""亲眼确认素材（老规矩：**给模型看的图，自己也得看过**）："""),
+PHOTOS = {
+    "rain_umbrella":  "雨天共伞，他把伞倾向她",
+    "sunset_bench":   "夕阳河畔长椅上相依",
+    "farewell_subway": "地铁站台牵手告别",
+    "home_kitchen":   "夜晚小厨房环抱做饭",
+}
+SCENE_FILES = {k: SCENES / f"{k}.jpg" for k in PHOTOS}
+neutral_face = SCENES / "neutral_face.jpg"
+missing_scene = [p.name for p in (*SCENE_FILES.values(), neutral_face) if not p.exists()]
+print("素材缺失：" + str(missing_scene) if missing_scene else "五张素材就位 ✅")"""),
+        md("""老规矩：**给模型看的图，自己先看过**。四张并排预览（谁在发图、发了什么，
+后面每个实验都建立在这四张上）："""),
         code("""from IPython.display import display
 
+def photo_strip(files, w=200):
+    # 横排预览：等比缩到同宽拼一条
+    ims = []
+    for p in files:
+        im = PILImage.open(p).convert("RGB")
+        im.thumbnail((w, 1000))
+        ims.append(im)
+    gap, H = 8, max(im.height for im in ims)
+    strip = PILImage.new("RGB", (sum(im.width for im in ims) + gap*len(ims), H), (246,246,248))
+    x = 0
+    for im in ims:
+        strip.paste(im, (x, 0)); x += im.width + gap
+    return strip
+
 if not missing_scene:
-    display(PILImage.open(parcel_desk).resize((390, 350)))"""),
-        md("""另备一组**程序可控图**（第 3、4 节的变量控制要用）：
+    display(photo_strip(SCENE_FILES.values()))"""),
+        md("""### 三类素材的分工
 
-| 图 | 内容 | 服务哪个实验 |
-|---|---|---|
-| `visitor` | 蓝衣人形 + 棕色包裹 | 3 节门禁比对（同款/红衣徽章） |
-| `courier_box` | 包裹特写（完好） | 4 节质检选项示例 |
+本册仍坚持素材分工，但主角换成了恋爱场景：**文生图场景**测“读图猜心”的真实
+表现；**基准照 + 代码变体**（亮度三档）做单变量归因；**表情包**（沿用 stickers/
+五张猫猫梗图）跑 criteria 示例图的应用。恋爱场景的特殊价值在于：**猜心没有
+标准答案**——这恰好是概率分布比 argmax 有信息量的最佳舞台。"""),
 
-真实图测“表现”，可控图控“变量”——门禁比对要保证两张徽章**只差衣服颜色一个变量**，
-这种精确控制搜图搜不来，只能自己画。两类素材的分工是实验设计的一部分。"""),
-        code("""def stick_figure(shirt=(60, 90, 150), parcel=False, w=800, h=600):
-    # 可控人形场景：shirt 颜色与是否带包裹是仅有的两个变量
-    img = PILImage.new("RGB", (w, h), (214, 216, 222))
-    d = ImageDraw.Draw(img)
-    d.rectangle([40, 380, w - 40, h - 40], fill=(178, 160, 140))
-    d.ellipse([330, 90, 470, 230], fill=(70, 110, 170))
-    d.polygon([(310, 240), (490, 240), (520, 400), (280, 400)], fill=shirt)
-    if parcel:
-        d.rectangle([360, 300, 560, 420], fill=(150, 105, 60),
-                    outline=(90, 60, 30), width=4)
-    return img
+        md("""## 2. 读图猜心：TA 为什么发这张照片
 
-Path("/tmp/jev_img").mkdir(exist_ok=True)
-stick_figure(parcel=True).save("/tmp/jev_img/visitor.jpg", quality=90)
-stick_figure().save("/tmp/jev_img/empty.jpg", quality=90)
-crop = stick_figure(parcel=True).crop((340, 280, 580, 440))
-crop = crop.resize((480, 320))          # 240x160 太小会被 400，放大到合规
-crop.save("/tmp/jev_img/courier_box.jpg", quality=90)
-print("可控图就绪：visitor / empty / courier_box")"""),
+照片作为 `state`、一次请求两个问题：
 
-        md("""## 2. 位置一：图像放进 `state`
+- `mood`（Noul）：画面里的氛围是甜蜜的吗？
+- `intent`（Choice）：**TA 发这张照片更想要什么？** 选项覆盖四种典型意图
+  （记录甜蜜 / 想被夸 / 暗示想一起去 / 求安慰）。
 
-`visitor` 作为 `state` 的一个字段，请求一次问两个问题：有没有人（Noul）、带了什么（Choice）。
-这正是官方文档 doorbell 示例的中文版。
-
-**先看反面**：如果不带野区开关会发生什么？我们故意裸调一次，预期 400。"""),
+**先看反面**：不带野区开关裸调一次，预期 400——每个带图请求都必须带
+`TypeSafe-Danger-Zone-Images: true`，这是本特性最常见的第一个坑。"""),
         code("""if client is not None:
     try:
         client.system_one(
-            state={"photo": Image(Path("/tmp/jev_img/visitor.jpg"))},
-            questions={"has_person": Noul(instructions="Is there a person in `photo`?")})
+            state={"photo": Image(SCENE_FILES["rain_umbrella"])},
+            questions={"mood": Noul(instructions="照片 `photo` 里的氛围甜蜜吗？")})
         print("意外的成功：开关不是必需的？")
     except TypeSafeBadRequestError as e:
-        print(f"✅ 预期的 400：{str(e)[:160]}")
+        print(f"✅ 预期的 400：{str(e)[:150]}")
 else:
     print("（离线模式跳过 400 演示）")"""),
-        md("""错误信息会说明图像没有开启。**每个**带图像的请求都要带 `TypeSafe-Danger-Zone-Images: true`
-——忘带开关是最常见的第一个坑。
+        md("""带上开关，四张照片逐张“猜心”。重点不是单张的答案，而是**四个意图概率
+怎么分布**："""),
+        md("""为什么用“猜心”教概率分布？因为恋爱意图天然没有标准答案——
+四张照片换四个人来猜，答案也不会一致。这种题恰恰不该只看 argmax，
+而该看**分布**：哪两个选项咬得近，哪里就是“模型也不确定、人得接手”的信号。"""),
 
-现在带上开关，正式发起这次实验："""),
-        code("""IMG_Q1 = {
-    "has_parcel": Noul(instructions="Is there a red parcel on the desk in `photo`?"),
-    "where": Choice(instructions="Where is the red parcel in `photo`?", criteria={
-        "on_desk": "Resting on the desk.",
-        "held_by_gripper": "Held in the air by the robot gripper.",
-        "not_visible": "Not visible in this photo."}),
+        code("""INTENT_Q = {
+    "mood": Noul(instructions="照片 `photo` 里的氛围是甜蜜温暖的吗？"),
+    "intent": Choice(instructions=(
+        "发照片的人为什么要分享这张照片？判断分享背后的意图。"), criteria={
+        "sweet_moment": "记录甜蜜的日常瞬间。",
+        "craving_praise": "展示美好事物，期待被夸。",
+        "hint_invite": "暗示想和对方一起做这样的事。",
+        "seek_comfort": "情绪低落或舍不得，想要安慰。"}),
 }
 
-resp1 = None
-if not missing_scene:
-    resp1 = ts.call(
-        state={"photo": Image(parcel_desk)},
-        questions=IMG_Q1,
-        offline_answers={
-            "has_parcel": _FakeAnswer(type="noul", noul=0.74),
-            "where": _FakeAnswer(type="choice", choice="on_desk", confidence=0.98),
-        }, tokens=1409)
-    for k, a in resp1.answers.items():
-        print(f"{k:12s} noul={getattr(a, 'noul', None)} choice={getattr(a, 'choice', None)}"
-              f" confidence={getattr(a, 'confidence', None)}")
-    print(f"usage: {resp1.usage.input_tokens} input tokens")
-else:
-    print("（素材缺失，跳过真实调用）")"""),        md("""### 观察要点
+INTENT_OFFLINE = {
+    "rain_umbrella":  (0.76, {"sweet_moment": 0.76, "craving_praise": 0.16, "hint_invite": 0.05}),
+    "sunset_bench":   (0.53, {"sweet_moment": 0.53, "craving_praise": 0.24, "hint_invite": 0.15}),
+    "farewell_subway": (0.46, {"sweet_moment": 0.46, "seek_comfort": 0.27, "craving_praise": 0.15}),
+    "home_kitchen":   (0.49, {"sweet_moment": 0.49, "craving_praise": 0.28, "hint_invite": 0.15}),
+}
+print("问题就绪：mood(Noul) + intent(Choice×4)")"""),
+        code("""READS = {}
+for key, desc in PHOTOS.items():
+    noul_v, probs = INTENT_OFFLINE[key]
+    r = ts.call(
+        state={"photo": Image(SCENE_FILES[key]), "about": desc},
+        questions=INTENT_Q,
+        offline_answers={"mood": _FakeAnswer(type="noul", noul=round(0.8 + 0.05 * len(key) % 1, 2)),
+                         "intent": _FakeAnswer(type="choice",
+                             choice=max(probs, key=probs.get), probabilities=probs,
+                             confidence=noul_v)})
+    a = r.answers["intent"]
+    READS[key] = (r.answers["mood"].noul, a)
+    top3 = sorted(a.probabilities.items(), key=lambda kv: -kv[1])[:3]
+    print(f"{key:15s} mood={READS[key][0]:.2f}  intent top3={[(k, round(v,2)) for k, v in top3]}")"""),
+        md("""### 观察要点：两极读数
 
-- **两个问题共享一次请求与同一张图**：token 只算一份图的，这是把图放在 `state` 的最大好处；
-- 真实光影下的读数值得细品：`where` 很笃定（on_desk 概率 0.99），`has_parcel` 却只有
-  0.74——**“在哪儿”答得果断，“有没有”反而犹豫**。桌面反光和阴影让“存在性”判断
-  变难了，这种细节是简笔画素材上永远看不到的（也是第 7 册 box 实验翻车的伏笔）；
-- 概率低于预期时，先别急着怪模型：把图拿出来亲眼看一遍（我们第 1 节就 display 过），
-  确认模型看到的和你以为它看到的是同一张图。"""),
-        md("""顺带一个对照练习：同一张 `empty.jpg`（可控图工坊里那张没有人形和包裹的空桌）
-问 `IMG_Q1`，`has_parcel` 应该接近 0。真实图与可控图各问一遍，你就能亲手量出
-“场景干净程度”对置信度的影响——这比任何文档描述都直观。"""),
+- **雨中共伞读得最笃定**：甜蜜记录 0.76 遥遥领先——画面叙事单一（甜），
+  模型不需要犹豫；
+- **告别站台和小厨房咬得最近**：告别是“记录甜蜜 0.46 对 求安慰 0.27”，
+  小厨房是“记录甜蜜 0.49 对 求夸 0.28”——发一张告别/同居感照片，
+  到底是记录、想被哄、还是想被夸？猜心题没有标准答案，**分布把这份不确定性
+  原样交还给你**，比 argmax 诚实得多；
+- 这也是本册想立的读图姿势：**概率咬合 = 该由人来判断的时刻**。把 0.49 当
+  “模型替 TA 表了态”是过度解读；把它当“这题危险，回话走心”刚刚好。
 
-        md("""## 3. 位置二：多图状态——门禁比对
+> **一个意外的多语言发现**：同一批照片在英文提问下，咬合发生在小厨房的
+> “暗示邀约 0.49 对 分享 0.47”；换成中文，咬合移到了“分享对求夸”——
+> **提问语言本身就是一个变量**。1.14 官宣的多语言收益，在这里变成了
+> 一句很实在的提醒：换个语言提问，记得重跑你的评测。"""),
+        md("""### 概率咬合时怎么办
 
-门禁比对是典型的双图问题：“照片里的人和**这张工牌照**是同一个人吗？”
-两张图都放进 `state`、各占一个字段，问题里按字段名引用——官方的
-“Reference specific fields”语法对图像同样有效。
+两选项差距 <0.25 时的实操建议：要么把选项描述改得更互斥后重问，要么补上下文
+（聊天记录一并放进 state）。试着把 `about` 字段换成你脑补的聊天背景再跑一遍——
+**state 里多一句语境，分布往往立刻拉开**。这也是 state 设计的通用规律：
+不是喂更多字，是喂对字。"""),
 
-我们画两张“工牌照”（浅蓝底的人形徽章），一张和 `visitor` **同款蓝衣**、一张换成
-**红衣人形**，分别问“是否同一人”。两次请求只有 `badge` 字段不同，
-概率之差就是模型“看图比对”的直接证据："""),
-        code("""def badge(shirt=(60, 90, 150)):
-    \"\"\"画一张工牌照：浅蓝底 + 指定衬衫颜色的人形。\"\"\"
-    img = PILImage.new("RGB", (300, 380), (176, 196, 222))
-    d = ImageDraw.Draw(img)
-    d.ellipse([105, 60, 195, 150], fill=(224, 172, 122))      # 头
-    d.polygon([(80, 160), (220, 160), (240, 380), (60, 380)], fill=shirt)
-    d.rectangle([60, 340, 240, 380], fill=(250, 250, 250))    # 工牌条
-    return img
+        md("""## 3. 光线变量控制：亮度如何左右“她开心吗”
 
-badge((60, 90, 150)).save("/tmp/jev_img/badge_blue.jpg", quality=90)   # 与 visitor 同色
-badge((150, 60, 60)).save("/tmp/jev_img/badge_red.jpg", quality=90)    # 红衣人
-print("两张工牌照已生成：badge_blue（同款）/ badge_red（红衣）")"""),
-        code("""BADGE_Q = {"same_person": Noul(instructions=(
-    "Is the person in `photo` the same person as in `badge`?"))}
+恋爱场景里最要命的问题是**氛围滤镜**：同一张脸，光线亮一点是不是就显得开心？
+这正好做一个教科书级的单变量实验——素材是中性基准照（表情本来就不悲不喜），
+用代码派生三个变体：**压暗 ×0.65 / 原图 / 提亮 ×1.35**。除了亮度，
+三个变体完全相同，变量拧到只剩一个。"""),
+        md("""### 为什么坚持“变量控制”
 
-def ask_badge(badge_path, offline_noul):
-    return ts.call(
-        state={"photo": Image(Path("/tmp/jev_img/visitor.jpg")),
-               "badge": Image(Path(badge_path))},
-        questions=BADGE_Q,
-        offline_answers={"same_person": _FakeAnswer(type="noul",
-                                                    noul=offline_noul)})
+直接拿四张场景图比“亮暗影响情绪”，结论会被画面内容污染（告别 vs 环抱
+本身就差很多）。变量控制的铁律：**想测哪个变量，就只动哪个变量**——基准照的
+表情、构图、背景全部冻结，只让亮度动，这样得到的 0.14→0.18 才能归因给光线。"""),
 
-same_blue = ask_badge("/tmp/jev_img/badge_blue.jpg", 0.71)
-other_red = ask_badge("/tmp/jev_img/badge_red.jpg", 0.35)
-print("同款蓝衣徽章  same noul =", same_blue.answers["same_person"].noul)
-print("红衣人徽章    same noul =", other_red.answers["same_person"].noul)"""),
-        md("""蓝衣徽章应该得到更高的“同一人”概率（我们的 `visitor` 正是蓝衣人形）。
-简笔画的区分度有限，别期待接近 1 的悬殊差距——但**方向**应该稳定。
+        code("""from PIL import ImageEnhance
 
-> 工程提示：多个问题共用一张图时，图进 `state` 一次、各问题按路径引用（如
-> `` `frames[2]` ``）；只有单个问题专用的图才考虑内联进 `instructions`——每内联一次，
-> 模型就多读一份图，token 与体积限制都会翻倍。"""),
+LIGHT_VARIANTS = []
+for name, factor in (("dim", 0.65), ("orig", 1.0), ("bright", 1.35)):
+    im = PILImage.open(neutral_face).convert("RGB")
+    if factor != 1.0:
+        im = ImageEnhance.Brightness(im).enhance(factor)
+    path = Path(f"/tmp/nf_{name}.jpg")
+    im.save(path, quality=88)
+    LIGHT_VARIANTS.append((name, factor, path))
+print("三档亮度变体已生成：dim / orig / bright")"""),
+        code("""HAPPY_Q = {"happy": Noul(instructions=(
+    "照片 `photo` 里的人看起来开心吗？"))}
 
-        md("""### 玩真的：聊天自动配表情包
+LIGHT_OFFLINE = {"dim": 0.14, "orig": 0.16, "bright": 0.18}
+light_rows = []
+for name, factor, path in LIGHT_VARIANTS:
+    r = ts.call(state={"photo": Image(path)}, questions=HAPPY_Q,
+                offline_answers={"happy": _FakeAnswer(type="noul",
+                                                      noul=LIGHT_OFFLINE[name])})
+    light_rows.append((name, factor, r.answers["happy"].noul))
+    print(f"{name:7s} ×{factor:<5} → happy noul = {light_rows[-1][2]}")"""),
+        md("""### 观察要点
 
-criteria 放图最有网感的用例：**根据聊天内容自动选表情包**。素材是五张猫猫梗图
-（随本笔记本存放在 `stickers/` 目录），每个选项 = 表情包描述 + 示例图：
+- **方向成立、幅度克制**：0.14 → 0.16 → 0.18，亮度单调推高“看起来开心”的概率，
+  光线确实在给情绪加分；
+- 但三档都趴在低位——**表情才是基调，光线只是修饰**。把脸从“平静”变成
+  “微笑”能带来的变化，远大于 1.35 倍提亮。单变量实验的价值就在这里：
+  它把“光线有多大话语权”量化成了一个可讨论的数字，而不是一句感性的
+  “氛围很重要”；
+- 工程读法：做“照片情绪把关”类流水线时，**先修图再判断**（提亮暗图）买到的
+  提升有限，别指望它救回一张臭脸。"""),
+        md("""对照第 2 节四张场景图的 `mood` 读数：场景叙事（共伞/告别/环抱）对情绪
+判断的拉动，比亮度这一个变量大得多——**内容 > 光线**。变量控制实验与场景
+实验合起来读，结论才完整。这也解释了为什么专业评测始终坚持控制变量：
+单看“提亮后分数变高”容易高估修图的价值。"""),
 
-| 选项 | 图 | 什么时候用 |
-|---|---|---|
-| `salute_boss` | 西装猫猫敬礼：“一切以领导安排为准” | 职场服从、收到、遵命 |
-| `stare_oh` | 猫猫瞪脸：“哦” | 敷衍、无语、冷淡回应 |
-| `giggle` | 猫猫偷笑 | 看戏、幸灾乐祸、偷着乐 |
-| `grab_away` | 一只手把猫猫抓走 | “把你抓走”、敏感话题快逃 |
-| `mochi_cute` | 圆脸猫猫被捧着：“咪咪喵喵的” | 撒娇、卖萌、软乎乎的请求 |
+        md("""## 4. 表情包回击与热度校准
 
-> 素材小知识：原始表情包大多只有一两百像素宽。文档写"宽高各 256 起、
-> 总像素 78,400 起"，但**实测 273 像素的一边仍被 400 拒收**——服务端真正的边界
-> 看起来是每边约 280。仓库里这五张统一放大到每边 ≥320，留足余量。
-> 野区特性，文档与实现有出入很正常：发图前自己试一次，别只信文档。"""),
+### 4.1 criteria 放示例图：用表情包回击
 
-        code("""# 表情包素材在章目录 stickers/ 下；请从 02_核心概念 目录启动本笔记本
-STICKERS = {
-    "salute_boss": ("收到，一切以领导安排为准（西装猫敬礼）", "salute_boss.jpg"),
-    "stare_oh":    ("哦。冷淡、无语地应付对方", "stare_oh.jpg"),
-    "giggle":      ("看热闹，幸灾乐祸地偷笑", "giggle.jpg"),
-    "grab_away":   ("不想聊了，直接把话题抓走", "grab_away.jpg"),
-    "mochi_cute":  ("心都化了，软软地答应撒娇请求", "mochi_cute.jpg"),
+TA 发完照片，你要回什么？把五张小鲸鱼贴纸（`stickers/`）挂进 Choice 的
+`example` 图——模型读懂你的处境，再从表情包库里挑最合适的一张。"""),
+        code("""STICKERS = {
+    "rua_you":    ("小鲸鱼捧爱心「rua 你」：亲昵示好，想捏一把", "rua_you.png"),
+    "fake_cry":   ("小鲸鱼揉眼「呜呜呜」：服软卖惨，等着被哄", "fake_cry.png"),
+    "angry_pout": ("小鲸鱼鼓脸「不理你了」：嗔怪抗议，需要哄", "angry_pout.png"),
+    "bear_hug":   ("两只小鲸鱼相拥「贴贴」：亲昵贴贴", "bear_hug.png"),
+    "ride_bear":  ("小鲸鱼骑乘「骑熊熊」：耍赖玩闹，不接正题", "ride_bear.png"),
 }
 missing = [k for k, (_, f) in STICKERS.items()
            if not Path("stickers", f).exists()]
-print("素材缺失：" + str(missing) if missing else "五张表情包就位 ✅")"""),
-        md("""素材长什么样，先亲眼看一遍——**给模型看的图，自己也得看过**，
-不然排查“为什么选错”时无从下手。五张拼成一张预览图，选项名标在每张下方："""),
+print("表情包缺失：" + str(missing) if missing else "五张表情包就位 ✅")"""),
+        md("""先亲眼看一遍五张候选（老规矩：给模型看的图，自己也得看过）："""),
         code("""def sticker_preview():
-    # 五张表情包拼一张横排预览（标签用选项名，避免中文字体问题）
     thumbs = []
     for key, (_, fname) in STICKERS.items():
         im = PILImage.open(Path("stickers", fname)).convert("RGB")
@@ -361,18 +379,12 @@ print("素材缺失：" + str(missing) if missing else "五张表情包就位 �
 
 if not missing:
     display(sticker_preview())"""),
-        md("""怎么读这张预览：**每张图 = 一个选项的“标准答案”**。模型收到聊天消息后，
-做的事就是在五张图和它们的文字描述里找情绪最匹配的一张——你也可以先自测一遍：
-遮住下一节的输出，想想三条消息各自该配哪张，再和模型的选择对比。
-人和模型的选择分歧本身就很有聊头。"""),
-        md("""聊天消息是纯文本 `state`，表情包全部挂在选项的 `example` 图上——模型要做的，
-是读懂这条消息的**情绪**，再从五张图里挑最合适的一张回。来三条情绪截然不同的消息："""),
         code("""STICKER_CRITERIA = {
     key: {"description": desc, "example": Image(Path("stickers", fname))}
     for key, (desc, fname) in STICKERS.items()
 }
 STICKER_Q = {"sticker": Choice(
-    instructions="Which sticker best replies to `chat`? Judge by each sticker's image and caption.",
+    instructions="哪张贴纸最适合用来回应 `chat`？请结合每张贴纸的画面与配字判断。",
     criteria=STICKER_CRITERIA)}
 
 CHATS = [
@@ -381,13 +393,13 @@ CHATS = [
     "下班了吗～给我带杯奶茶嘛，拜托拜托",
 ]
 OFFLINE_PICK = [
-    {"sticker": _FakeAnswer(type="choice", choice="salute_boss", confidence=0.62,
-        probabilities={"salute_boss": 0.70, "stare_oh": 0.22, "giggle": 0.06})},
-    {"sticker": _FakeAnswer(type="choice", choice="stare_oh", confidence=0.19,
-        probabilities={"mochi_cute": 0.35, "stare_oh": 0.34, "salute_boss": 0.16})},
-    {"sticker": _FakeAnswer(type="choice", choice="mochi_cute", confidence=0.74,
-        probabilities={"mochi_cute": 0.79, "salute_boss": 0.13, "stare_oh": 0.06})}]
-print("准备好三条消息与离线替身答案")"""),
+    {"sticker": _FakeAnswer(type="choice", choice="fake_cry", confidence=0.76,
+        probabilities={"fake_cry": 0.81, "angry_pout": 0.14, "ride_bear": 0.04})},
+    {"sticker": _FakeAnswer(type="choice", choice="ride_bear", confidence=0.71,
+        probabilities={"ride_bear": 0.77, "fake_cry": 0.13, "angry_pout": 0.05})},
+    {"sticker": _FakeAnswer(type="choice", choice="fake_cry", confidence=0.34,
+        probabilities={"fake_cry": 0.47, "rua_you": 0.34, "ride_bear": 0.11})}]
+print("三条消息与离线替身就绪")"""),
         code("""for chat, offline in zip(CHATS, OFFLINE_PICK):
     if missing:
         break
@@ -399,76 +411,86 @@ print("准备好三条消息与离线替身答案")"""),
     print(f"   → {a.choice}（confidence {a.confidence}）top3: {top3}")
     _, fname = STICKERS[a.choice]
     display(PILImage.open(Path("stickers", fname)).resize((120, 120)))"""),
-        md("""### 如果选错了呢
+        md("""- 加班@人 → “呜呜呜”卖惨 0.81（果断：惨事配惨脸，天经地义）、
+  砍一刀 → “骑熊熊”耍赖 0.77（不接招、岔开玩）——两条都符合直觉；
+- **奶茶那条最有意思**：`fake_cry` 0.47 对 `rua_you` 0.34 咬死——
+  撒娇要奶茶，到底是“跟着呜呜呜装可怜”还是“rua 回去捏一把”？两种回应都成立，
+  概率分布把语义模糊原样暴露（与第 2 节小厨房的咬合遥相呼应：**文本和
+  图像一样，模糊处分布会说真话**）。
 
-概率分布会把“犹豫”暴露出来：如果 `giggle` 和 `stare_oh` 两个选项的概率咬得很近，
-说明这两张图在“看戏 vs 无语”的语义上本来就有重叠——**不是模型坏了，是选项空间没拉开**。
-解法和文本 Choice 一样：把描述写得更互斥，或者干脆换一张情绪更鲜明的图。
-这正是第 3 册“选项定义要互斥且覆盖合理”在视觉版里的重现。"""),
+### 4.2 Score 热度校准：同一句话，配不同的图
 
-        md("""### 观察要点
+选完表情包还差火候——同一句“好呀好呀！”，配甜蜜合照和配告别站台，
+热度档位该不一样。Score 的 1–5 量表正合适。先看**弱锚点版**："""),
+        code("""HEAT_WEAK = {"heat": Score(instructions=(
+    "我们打算回复一句「好呀好呀！」。面对这张照片，怎样的热情程度才合适？"),
+    criteria=["1 冷静", "2 略带热情", "3 明显开心", "4 非常热情", "5 拉满"])}
 
-- **情绪 → 图**的映射是模型自己做的：加班@人 → “以领导安排为准”（0.70，果断）、
-  撒娇求奶茶 → “咪咪喵喵的”（0.79，收敛）——两条都符合直觉；
-- **砍一刀那条最有教学价值**：`mochi_cute` 0.35 对 `stare_oh` 0.34，几乎五五开。
-  “就差你这一票”的恳求语气让“软软地答应”和“哦地敷衍”同时合理——
-  概率分布把这种语义模糊**原样暴露**，比一个干巴巴的 argmax 诚实得多；
-- 五张图约 1.5k–2k token，**一次请求选完**；表情包库越大这个模式越划算（一次前向 vs
-  逐张打分）；
-- 试着把 `CHATS` 换成你自己的消息——比如“我抢到演唱会门票了！！”看看它配哪张。
-  素材换成你自己的表情包（记得放大到合规尺寸）就是一套能跑的自动回复原型。
+HEAT_STRONG = {"heat": Score(instructions=(
+    "女朋友发来了这张照片，我将回复「好呀好呀！」。"
+    "结合这张照片的情绪，多热情的语调才是恰当的？"),
+    criteria=["1 冷静简短就好，过度热情显得敷衍",
+              "2 平和回应，带一点温度",
+              "3 明显开心，配一个感叹号正合适",
+              "4 非常热情，该加语气词和表情",
+              "5 热情拉满，她正期待被认真回应"])}
+HEAT_OFFLINE = (2.5, {"rain_umbrella": 2.52, "home_kitchen": 2.71,
+                      "farewell_subway": 2.74, "sunset_bench": 2.26})
+print("弱/强两套锚点就绪")"""),
+        code("""print("弱锚点（预期：区分不开）")
+for key in PHOTOS:
+    r = ts.call(state={"photo": Image(SCENE_FILES[key])}, questions=HEAT_WEAK,
+                offline_answers={"heat": _FakeAnswer(type="score",
+                    score=HEAT_OFFLINE[0] - 0.1)})
+    print(f"  {key:15s} → {r.answers['heat'].score}")
 
-> 工程边界：真实表情包有版权，**自用原型没问题，对外产品要用有授权的素材**；
-> 本册五张为通用猫猫梗图风格，仅作教学示例。"""),
+print("强锚点（预期：按画面情绪拉开）")
+for key in PHOTOS:
+    r = ts.call(state={"photo": Image(SCENE_FILES[key])}, questions=HEAT_STRONG,
+                offline_answers={"heat": _FakeAnswer(type="score",
+                    score=HEAT_OFFLINE[1][key])})
+    print(f"  {key:15s} → {r.answers['heat'].score}")"""),
+        md("""两套锚点共用同一批照片、同一个模型、同一句回复——唯一变量是
+**量表的文字定义**。这个小对照本身就是一个完整的受控实验；
+再叠加第 2 节的中英对照，就成了“提示词语言 × 锚点措辞”的双变量现场。"""),
 
-        md("""### 本节小结：三个位置的选型口诀
+        md("""### 观察要点：锚点效应不是普适的
 
-一句话记法：**共用的图进 state、专属的图进 instructions、当标准答案用的图进 criteria**。
-判据始终是成本与作用域——图被读几次、被哪些问题看见。下一节把图放进选项里，
-这是三种位置里最“反直觉”但最好用的一种。"""),
+有意思的反转：英文提问时“弱锚点挤成一团、强锚点拉开”；换成中文，
+**两套锚点都挤在 2.26–2.74**，弱锚点甚至分得比强锚点还开一点（共伞 2.52 /
+小厨房 2.71 差距反转）。这说明锚点设计的效果**随提问语言与措辞波动**，
+不是一次调好就永远有效的开关——第 3 册“等级编码要有业务含义”在多语言
+场景要加一条：**换了语言，锚点要重调**，A/B 对照才是自己的答案。
 
-        md("""## 4. 位置三：图像放进 `criteria`（用示例图定义选项）
+### 4.3 三连合成：love_advisor()
 
-Choice 的每个选项可以由**示例图**定义——模型拿 `state` 里的图和选项的示例图对比。
-质检场景：“这个包裹的外观属于哪一类？”两个选项分别挂一张示例图（完好 / 破损），
-第三个选项是纯文本兜底。"""),
-        code("""def parcel_sample(broken=False):
-    \"\"\"画包裹示例图：完好（封条整齐）或破损（封条断裂 + 裂缝）。\"\"\"
-    img = PILImage.new("RGB", (420, 320), (236, 236, 236))
-    d = ImageDraw.Draw(img)
-    d.rectangle([60, 70, 360, 250], fill=(150, 105, 60), outline=(90, 60, 30), width=4)
-    d.line([210, 70, 210, 250], fill=(90, 60, 30), width=4)   # 封条
-    if broken:
-        d.line([150, 120, 190, 200], fill=(40, 40, 40), width=6)   # 裂缝
-        d.line([230, 110, 260, 190], fill=(40, 40, 40), width=6)
-    return img
+把三段拼成一个函数——照片进、三件套出（情绪与意图分布 + 推荐表情包 +
+热度档位）："""),
+        code("""def love_advisor(photo_path, chat=None):
+    # 三连：读图猜心 + 表情包回击 + 热度校准（各一次请求）
+    r1 = ts.call(state={"photo": Image(photo_path), "about": chat or ""},
+                 questions=INTENT_Q, offline_answers={
+                     "mood": _FakeAnswer(type="noul", noul=0.85),
+                     "intent": _FakeAnswer(type="choice", choice="sweet_moment",
+                         probabilities={"sweet_moment": 0.8}, confidence=0.8)})
+    r2 = ts.call(state={"chat": chat or "看图有话说"},
+                 questions=STICKER_Q, offline_answers=OFFLINE_PICK[0])
+    r3 = ts.call(state={"photo": Image(photo_path)}, questions=HEAT_STRONG,
+                 offline_answers={"heat": _FakeAnswer(type="score", score=2.3)})
+    return r1, r2, r3
 
-parcel_sample(False).save("/tmp/jev_img/qc_ok.jpg", quality=90)
-parcel_sample(True).save("/tmp/jev_img/qc_broken.jpg", quality=90)
-print("质检示例图已生成：qc_ok / qc_broken")"""),
-        code("""qc = ts.call(
-    state={"photo": Image(Path("/tmp/jev_img/courier_box.jpg"))},
-    questions={"quality": Choice(instructions=(
-        "Which best describes the parcel in `photo`?"),
-        criteria={
-            "intact": "Looks like an intact parcel. Example: x2qc-ok",
-            "damaged": "Visible damage like cracks. Example: x3qc-broken",
-            "unclear": "Cannot tell from this photo."})},
-    offline_answers={"quality": _FakeAnswer(type="choice", choice="intact",
-                                            confidence=0.66)})
-print("质检结论 =", qc.answers["quality"].choice,
-      "| confidence =", getattr(qc.answers["quality"], "confidence", None))"""),
-        md("""### 观察要点
-
-- 选项的**名字**（`intact`/`damaged`）是程序拿到的值，示例图是模型比对的依据——
-  “对象键不会被替换成图”，图要写在选项的**描述文本**里（官方规则的实战验证）；
-- `unclear` 是纯文本兜底选项。给视觉判断留一条“看不清”的退路，与置信度门控是互补的两道保险
-  （对照第 4 册置信度实验与知识库 41 号“门控而非感觉”）。
-
-> 说明：把示例图真正挂进选项描述需要手动管理 `assets` 引用（HTTP 方式），SDK 0.7.5
-> 的 `Image` 对象目前支持 state 与 instructions 两个位置。上面的实验用文字指代示例图，
-> 完整的多图 criteria 模式见官方文档 [Criteria](
-> https://docs.typesafe.ai/go/images#criteria) 一节。"""),
+if not missing_scene and not missing:
+    r1, r2, r3 = love_advisor(SCENE_FILES["rain_umbrella"],
+                              "下班路上拍的，伞都歪了也不管")
+    intent = r1.answers["intent"]
+    print("意图 top2:", sorted(intent.probabilities.items(),
+                               key=lambda kv: -kv[1])[:2])
+    print("表情包:", r2.answers["sticker"].choice,
+          "| 热度档位:", r3.answers["heat"].score)"""),
+        md("""一次调用链跑完“读懂照片 → 选表情包 → 定火候”。分寸也说在明处：
+这个 Demo 的价值是**让概率分布替你把不确定性摆上桌**——咬合很近的读数
+（小厨房 0.49/0.47）在提醒“该走心聊了”，而不是替你决定怎么回。
+真把恋爱交给模型硬赌，模型只会陪你一起翻车。"""),
 
         md("""## 5. 边界与成本的三组实测
 
@@ -487,7 +509,7 @@ print("质检结论 =", qc.answers["quality"].choice,
     try:
         client.system_one(
             state={"photo": Image(Path("/tmp/jev_img/too_small.jpg"))},
-            questions={"q": Noul(instructions="Is there a person in `photo`?")},
+            questions={"q": Noul(instructions="照片 `photo` 里有人吗？")},
             extra_headers=DANGER_HEADERS)
         print("意外的成功：尺寸限制没有生效？")
     except Exception as e:
@@ -496,17 +518,29 @@ else:
     print("（离线模式跳过尺寸拒绝演示）")"""),
         md("""### 5.2 图片的 token 成本
 
-同一张 `visitor.jpg`，纯文本提问（state 里只放文字描述）与图像提问的 token 对比："""),
-        code("""text_only = ts.call(
-    state={"log": "门口相机 14:02：画面中站着一个拿棕色包裹的人。"},
-    questions=IMG_Q1,
-    offline_answers={
-        "has_person": _FakeAnswer(type="noul", noul=0.93),
-        "carrying": _FakeAnswer(type="choice", choice="parcel", confidence=0.91),
-    }, tokens=290)
-print(f"纯文本 state：{text_only.usage.input_tokens} input tokens")
-print(f"图像 state  ：{resp1.usage.input_tokens} input tokens（第 2 节同题）")
-print(f"→ 一张 800×600 的图在本例约多花 {resp1.usage.input_tokens - text_only.usage.input_tokens} token")"""),
+同一组“猜心”问题，纯文本描述照片与直接发照片的 token 对比（文字版把画面
+写清楚要一百多字，但还是比图便宜一个量级）："""),
+        code("""text_state = ts.call(
+    state={"about": "雨天街头，男生把伞倾向女生，自己半边肩膀淋湿，两人相视而笑"},
+    questions=INTENT_Q,
+    offline_answers={"mood": _FakeAnswer(type="noul", noul=0.9),
+                     "intent": _FakeAnswer(type="choice", choice="sweet_moment",
+                         probabilities={"sweet_moment": 0.85},
+                         confidence=0.85)}, tokens=310)
+img_state = ts.call(
+    state={"photo": Image(SCENE_FILES["rain_umbrella"])},
+    questions=INTENT_Q,
+    offline_answers={"mood": _FakeAnswer(type="noul", noul=0.94),
+                     "intent": _FakeAnswer(type="choice", choice="sweet_moment",
+                         probabilities={"sweet_moment": 0.94},
+                         confidence=0.92)}, tokens=2310)
+print(f"文字描述 state：{text_state.usage.input_tokens} tokens")
+print(f"照片 state    ：{img_state.usage.input_tokens} tokens")
+print(f"→ 一张 788×1400 的照片约多花 "
+      f"{img_state.usage.input_tokens - text_state.usage.input_tokens} token")"""),
+        md("""值得对比的不只是价格，还有**读数质量**：文字版“sweet_moment 0.85”来自你写下的描述——你写什么它读什么；照片版 0.94 才是模型自己从像素里看出来的。
+**文字 state 是转述，图像 state 是目击**。生产里的选择往往是混合式：关键证据
+发图、背景信息用文字，两边各占其长。"""),
         md("""图像按 token 计费、单价与文本相同（官方计费页）。一张 800×600 的图 ≈ 1.3k–1.7k token，
 等于几百个汉字——**图不是免费的眼睛**。工程上把多问共用的一张图放 `state`、把大图先裁剪/
 降采样，都是在省真金白银（对照知识库 33 号 Arena 的成本审计思路）。
@@ -535,8 +569,8 @@ print("三帧已生成：关 → 半开 → 关")"""),
         {"seconds_ago": 1, "frame": Image(Path("/tmp/jev_img/door_1.jpg"))},
         {"seconds_ago": 0, "frame": Image(Path("/tmp/jev_img/door_2.jpg"))},
     ]},
-    questions={"opened": Noul(instructions="Did the door in `frames` open at any moment?"),
-               "now_closed": Noul(instructions="Is the door in `frames[2]` closed?")},
+    questions={"opened": Noul(instructions="`frames` 里的门在这段时间内被打开过吗？"),
+               "now_closed": Noul(instructions="`frames[2]` 里最新的那帧门是关着的吗？")},
     offline_answers={"opened": _FakeAnswer(type="noul", noul=0.83),
                      "now_closed": _FakeAnswer(type="noul", noul=0.9)},
     tokens=4900)
@@ -547,32 +581,54 @@ print("最新一帧是关着的 noul =", door.answers["now_closed"].noul)"""),
 - 三张图只发一次请求；问题可以用路径引用某一帧（`` `frames[2]` ``）——**结构化 state
   的引用语法对图像同样有效**；
 - 帧数×每帧 token 就是成本：帧序列很容易把单次请求推到几千 token，够用时别多放。"""),
-        md("""至此本册动用了三类素材，它们各自回答不同的问题：**真实渲染图**（分拣台
-三张）测模型在真实光影下的表现；**程序可控图**（人形与徽章、门的三帧）把变量
-拧到只剩一个，做归因；**真实表情包**（第 4 节）跑最有烟火气的应用。选素材就是
-选实验设计——这个习惯比任何一个具体结论都更值得从本册带走。"""),
+        md("""帧序列在恋爱场景同样有位置：TA 的朋友圈九宫格、旅行相册精选，
+都是天然的“图数组”。值得注意的问题相同——**每帧都要花 token**，九张图
+轻松过万；工程上的常见做法是先挑再发（先用一次便宜的 Choice 选出最值得
+细看的一两张，再对它细判），这就是“检索先行、决策殿后”的缩影。"""),
+        md("""回顾本册的三类素材与它们的分工：**文生图场景**（TA 的四张照片）测
+“读图猜心”的真实表现；**基准照 + 代码变体**（亮度三档）把变量拧到只剩一个，
+做归因；**表情包**（小鲸鱼贴纸，criteria 示例图）跑最有烟火气的应用；**帧序列**（门三帧）
+演示多图结构化 state。选素材就是选实验设计——这个习惯比任何具体结论
+都更值得带走。"""),
 
         md("""---
 
 # 小结
+
+## 恋爱三连回顾
+
+| 环节 | 原语与位置 | 本册实测的关键读数 |
+|---|---|---|
+| 读图猜心 | 图进 `state` + Noul/Choice | 雨伞 0.76 果断；告别 0.46/0.27、小厨房 0.49/0.28 咬合 |
+| 光线变量 | 基准照三档亮度 + Noul | 0.14→0.16→0.18 单调但克制：表情是基调，光线是修饰 |
+| 表情包回击 | criteria 示例图 + Choice | 奶茶 0.47/0.34 咬死：模糊处分布说真话 |
+| 热度校准 | 图进 `state` + Score | 中文下两套锚点都挤 2.26–2.74：锚点效应随语言波动 |
 
 ## 图像输入的三个位置
 
 | 位置 | 适用 | 成本要点 |
 |---|---|---|
 | `state` | 多个问题共用的图 | 一份图所有问题共享，最省 |
-| `instructions` | 只有一个问题要用的图（比对、参照） | 哪个问题用它，哪个问题就多一份图 |
-| `criteria` | 用示例图定义选项（质检、手势） | 每个示例图都计入请求体积 |
+| `instructions` | 只有一个问题要用的图 | 哪个问题用它，哪个问题就多一份图 |
+| `criteria` | 用示例图定义选项（表情包、质检） | 每个示例图都计入请求体积 |
 
 ## 踩坑清单（本册实测）
 
 | 坑 | 症状 | 解法 |
 |---|---|---|
 | 忘带 `TypeSafe-Danger-Zone-Images: true` | 400 | 每个带图请求都带开关 |
-| `Image("/path/str")` 传字符串 | SDK 本地报错“pass file bytes or a path” | 用 `Image(Path(...))` |
-| 图片太小（<256×256 或 <78,400 像素） | 400/413，**不会**被自动缩放 | 发送前用 Pillow 调整 |
-| 简笔画/示意图片段 | Noul 明显低于真实照片 | 特性边界：换真实照片或调低阈值预期 |
-| 表情包原图太小 | 400（实测每边约 280 才放行，严于文档的 256） | 每边 ≥320 再入库（stickers/ 已处理） |
+| `Image("/path/str")` 传字符串 | SDK 本地报错 | 用 `Image(Path(...))` |
+| 图片任一边 >1568 或总像素超限 | 400/413，不会自动缩放 | 长边压到 ≤1400 再发 |
+| 表情包原图太小 | 400（实测每边约 280 才放行，严于文档 256） | 每边 ≥320 再入库 |
+| Score 锚点干巴巴 | 各样本挤在同一档 | 每档写清业务场景（4.2 双锚点对照） |
+
+## 扩展练习
+
+- 把 `love_advisor()` 的 `chat` 换成你自己的真实对话，看意图分布变不变；
+- 给表情包库加一张“学习/加班”主题的图，看模型在“加班”消息上会不会改选；
+- 把四张场景图喂给第 7 册的 box（比如框出 `farewell_subway` 里的两个人），
+  亲眼看看 box 在真实图片上与本册 Noul/Choice 的差距——那正是野区特性
+  成熟度的真实分层。
 
 ## 下一篇
 
@@ -593,30 +649,34 @@ def build_box_notebook():
 
 这是第一个“不只是聪明 if 语句”的原语：从**打分**走向**定位**。本册用程序随机摆放
 包裹并记录真值框，让每一次定位都能自动算 IoU 判分——模型答得准不准，不靠肉眼。""",
-        feature="box", model="jev-preview",
-        model_note="box **只在 1.14 可用**，必须 `jev-preview` 或 `jev-1.14.0`；1.13 会拒绝。")
+        feature="box", model="jev-1.14.0",
+        model_note="box **只在 1.14 可用**，本册固定 `jev-1.14.0`（也可用 `jev-preview`）；1.13 会拒绝。")
 
     cells += [
         md("""## 1. 素材与真值标定
 
-三张**真实感渲染**的分拣台场景（与第 6 册同源，`scenes/` 目录）：红包裹静置桌面
-（`parcel_desk`，高清截图裁剪）、夹爪移到包裹上方（`arm_above`）、包裹被夹起悬空
-（`holding`，演示 GIF 抽帧）。
+方案 A 的两个场景，一难一易：
 
-真实图的代价是**真值不再由画图函数自动给出**。我们逐张目视标定红包裹的框，
+| 图 | 画面 | 难度构成 |
+|---|---|---|
+| `ring_box` | 烛光晚餐桌上打开的丝绒戒指盒，金色戒指很小 | 小目标 + 烛光 + 反光（地狱级） |
+| `couple_photo` | 公园长椅上的情侣合照，两人完整入镜 | 大目标 + 顺光（友好级） |
+
+真实图的代价是**真值不再由画图函数自动给出**。我们逐张目视标定目标的框，
 写进代码常量（归一化边），并画到图上亲眼复核——标定是人工的，但之后的判分链
-（IoU 计算、统计）全部自动。目视标定有 ±0.02 量级的误差，对本册结论足够。"""),
-        code("""from PIL import Image as PILImage
+（IoU 计算、统计）全部自动。目视标定有 ±0.02 量级的误差，对本册结论足够；
+小目标（戒指）的标定误差比例会更大，读数时心里有数即可。"""),
+        code("""from PIL import Image as PILImage, ImageDraw
 
 SCENES = Path("scenes")
-# 人工目视标定：红包裹的 (left, top, right, bottom) 归一化边
+# 人工目视标定：目标的 (left, top, right, bottom) 归一化边
+# ring_box 标的是"戒指盒整体"（戒指本身太小，先按盒标）
 TRUTH = {
-    "parcel_desk.png": (0.385, 0.47, 0.54, 0.64),
-    "arm_above.png":   (0.34, 0.58, 0.60, 0.76),
-    "holding.png":     (0.40, 0.36, 0.66, 0.56),
+    "ring_box.jpg":     (0.32, 0.63, 0.68, 0.85),
+    "couple_photo.jpg": (0.11, 0.21, 0.89, 0.87),
 }
 missing_scene = [n for n in TRUTH if not (SCENES / n).exists()]
-print("素材缺失：" + str(missing_scene) if missing_scene else "三图与标定就位 ✅")"""),
+print("素材缺失：" + str(missing_scene) if missing_scene else "两图与标定就位 ✅")"""),
         code("""from PIL import ImageDraw
 from IPython.display import display
 
@@ -629,22 +689,24 @@ def draw_box(img, box, color, width=5):
     return img
 
 if not missing_scene:
-    base = PILImage.open(SCENES / "parcel_desk.png").convert("RGB")
-    display(draw_box(base, TRUTH["parcel_desk.png"], (255, 0, 0))
-            .resize((390, 350)))"""),
-        md("""红框应恰好套住桌面上的红包裹——**标定可信，后面 IoU≈0 才能怪模型**。
+    base = PILImage.open(SCENES / "ring_box.jpg").convert("RGB")
+    display(draw_box(base, TRUTH["ring_box.jpg"], (255, 0, 0))
+            .resize((390, 420)))"""),
+        md("""红框应恰好套住戒指盒——**标定可信，后面 IoU 低才能怪模型**。
 （先自己复核标注，再跑模型，是评测的基本功。）
 
-## 2. 第一次 box 请求：读框、裁剪、画出来
+## 2. 第一次 box 请求：找戒指、读框、裁出特写
 
-流程与官方文档一致：分数边 → 像素框 → 裁剪。但本册多做一步——把**预测框也画回
-原图**，与标定框同框对比。这一步会让后面发生的事情一目了然："""),
-        md("""三张图各司其职：`parcel_desk` 高清、光影干净，是“最接近真实照片”的考卷；
-`arm_above` 与 `holding` 来自演示 GIF 的抽帧，画质有压缩损伤——三张一起测，
-顺便能看到画质对定位的影响。"""),
+流程与官方文档一致：分数边 → 像素框 → 裁剪。本节多做两步：把**预测框画回
+原图**与标定对比；把预测框**裁出来放大看**——这就是“自动生成特写九宫格”
+的全部原理："""),
+        md("""两张图正好构成一个难度阶梯：`couple_photo` 大目标、顺光——box 应该
+最舒服的考卷；`ring_box` 小目标、烛光、反光——最难的真实条件。本册选择
+**先难后易**：第一手读数直面真实场景的最坏情况，后面的对照组再告诉你上限。"""),
+
 
         code("""def edge(edges, k):
-    # SDK 返回对象、替身可能是 dict 或 (l,t,r,b) 元组——三种都取得到
+    # SDK 的 box 是对象、离线替身是 dict 或元组——三种都取得到
     if isinstance(edges, dict):
         return edges[k]
     if isinstance(edges, (tuple, list)):
@@ -663,79 +725,126 @@ def iou(box_a, box_b):
     union = ((box_a[2]-box_a[0])*(box_a[3]-box_a[1])
              + (box_b[2]-box_b[0])*(box_b[3]-box_b[1]) - inter)
     return inter / union if union else 0.0
-print("工具函数就绪：edge / to_pixels / iou")"""),
-        code("""BOX_Q = {"parcel": {"type": "box",
-                   "instructions": "the red parcel in `photo`"}}
+BOX_Q = {"parcel": {"type": "box",
+                   "instructions": "照片 `photo` 里的包裹"}}
+print("工具函数就绪：edge / to_pixels / iou / BOX_Q")"""),
+        code("""BOX_RING = {"ring": {"type": "box",
+                   "instructions": "照片 `photo` 里的戒指盒"}}
 
-def ask_box(fname, offline_box, offline_conf=0.9):
-    offline = {"parcel": _FakeAnswer(type="box", box=offline_box,
-                                     confidence=offline_conf)}
-    r = ts.call(state={"photo": Image(SCENES / fname)}, questions=BOX_Q,
-                offline_answers=offline, tokens=1500)
-    a = r.answers["parcel"]
-    b = tuple(edge(a.box, k) for k in ("left", "top", "right", "bottom"))
-    return a, b
-
-img0 = PILImage.open(SCENES / "parcel_desk.png").convert("RGB")
+img0 = None
 if not missing_scene:
-    a0, pred0 = ask_box("parcel_desk.png", TRUTH["parcel_desk.png"])
+    img0 = PILImage.open(SCENES / "ring_box.jpg").convert("RGB")
+    r0 = ts.call(state={"photo": Image(SCENES / "ring_box.jpg")},
+                 questions=BOX_RING,
+                 offline_answers={"ring": _FakeAnswer(
+                     type="box", box=TRUTH["ring_box.jpg"], confidence=0.9)},
+                 tokens=1500)
+    a0 = r0.answers["ring"]
+    pred0 = tuple(edge(a0.box, k) for k in ("left", "top", "right", "bottom"))
     print("box =", pred0, "| confidence =", a0.confidence)
-    print("IoU =", round(iou(pred0, TRUTH["parcel_desk.png"]), 3))"""),
-        md("""先跑通一次完整链路：请求 → 分数边 → 像素框 → 裁剪。工具函数
-（`edge` / `to_pixels` / `iou`）一次备齐，后面所有实验复用："""),
-
-        md("""confidence 0.9 上下，看起来胸有成竹。但把预测框（绿）画上去和标定（红）对比："""),
-        code("""if not missing_scene:
-    show = draw_box(img0.copy(), TRUTH["parcel_desk.png"], (255, 0, 0))
+    print("IoU =", round(iou(pred0, TRUTH["ring_box.jpg"]), 3))"""),
+        md("""confidence 出来了，但别急着信——把预测框（绿）画上去和标定（红）对比，
+再把预测框裁出来放大："""),
+        code("""if img0 is not None:
+    show = draw_box(img0.copy(), TRUTH["ring_box.jpg"], (255, 0, 0))
     show = draw_box(show, pred0, (0, 200, 0))
-    display(show.resize((390, 350)))
-    crop = img0.crop(to_pixels(pred0, img0.size))
-    display(crop.resize((200, 200)))"""),
-        md("""**绿框完全没套住包裹**——它框在了右下角。裁剪出来的也不是包裹，而是桌面的一角。
-高置信 + 大偏移，这就是本册最重要的一组读数。
+    display(show.resize((390, 420)))
+    display(img0.crop(to_pixels(pred0, img0.size)).resize((200, 220)))"""),
+        md("""## 3. 两图全测：翻车是一致的吗
 
-## 3. 三张图全测：翻车是一致的吗
-
-把三张真实场景图都问一遍（每张两次，顺带看重测稳定性）："""),
+戒指盒（小目标+烛光）和合照（大目标+顺光）各问两次，顺带看重测稳定性："""),
         code("""REAL_ROWS = []
-for fname, truth in TRUTH.items():
+ASKS = [("ring_box.jpg", "ring", "照片 `photo` 里的戒指盒"),
+        ("couple_photo.jpg", "pair", "照片 `photo` 里的两个人")]
+for fname, qkey, ins in ASKS:
     if missing_scene:
         break
     for t in range(2):
-        a, pred = ask_box(fname, truth)
-        REAL_ROWS.append((fname, t, iou(pred, truth), a.confidence,
+        r = ts.call(state={"photo": Image(SCENES / fname)},
+                    questions={qkey: {"type": "box", "instructions": ins}},
+                    offline_answers={qkey: _FakeAnswer(
+                        type="box", box=TRUTH[fname], confidence=0.9)},
+                    tokens=1500)
+        a = r.answers[qkey]
+        pred = tuple(edge(a.box, k) for k in ("left", "top", "right", "bottom"))
+        REAL_ROWS.append((fname, t, iou(pred, TRUTH[fname]), a.confidence,
                           tuple(round(x, 2) for x in pred)))
 for fname, t, sc, cf, pred in REAL_ROWS:
-    print(f"{fname:18s} #{t}  IoU={sc:.3f}  conf={cf:.2f}  pred={pred}")"""),
-        md("""三张图、六次请求，**IoU 全部为 0**，而 confidence 全在 0.9 上下。
-两种可能：模型系统性失灵，或者它框住的东西“在它看来”确实是红色块状物。
-别急着下结论——追查一下预测框里到底是什么（下一节）。
+    print(f"{fname:17s} #{t}  IoU={sc:.3f}  conf={cf:.2f}  pred={pred}")"""),
+        md("""两次请求的预测框几乎一致（0.61–0.91 稳定复现）——这不是随机抖动，
+是模型对这张图**稳定的错误感知**。稳定错误比随机错误更值得追：
+说明图里有某个稳定的视觉特征被当成了目标。"""),
 
-> 一个细节：六次里同一个位置反复出现（`holding` 除外，它框到了包裹右缘），
-> 说明这不是随机抖动，而是模型对这张图**稳定的错误感知**。"""),
+        md("""### 观察要点：先别急着给模型定罪
 
-        md("""读这组数字的正确姿势：**IoU 是事实，confidence 是自我评价**——
-两者打架时，永远先信 IoU。0.9 的自信配上 0 的重合，说明模型的“确定感”
-和“正确”在 box 里暂时是两回事（第 5 节的对照组会再补一刀）。"""),
+- **戒指盒**：IoU 0.07、confidence 0.91——乍看是“高自信翻车”；
+- **合照**：IoU 0.40、confidence 0.4——模型自己都在表示“没框全”；
+- 两次重测读数几乎一致——不是抖动，是**稳定的系统性结果**。
 
+下一节会揭晓：戒指盒的低 IoU **不是模型的错，是标注的错**。"""),
         md("""## 4. 追查：预测框里到底是什么
 
-裁出 `parcel_desk` 预测框周围的区域，放大看；再统计区域内的红色像素占比："""),
-        code("""if not missing_scene:
-    px0, py0 = to_pixels(pred0, img0.size)[::2], to_pixels(pred0, img0.size)[1::2]
+追查的方法不变：裁出 `ring_box` 预测框周围的区域放大看，再把**预测框画回
+原图**与人工标定同框对比："""),
+        code("""if img0 is not None:
     left, top, right, bottom = to_pixels(pred0, img0.size)
     region = img0.crop((max(0, left-60), max(0, top-60),
                         min(img0.width, right+60), min(img0.height, bottom+60)))
     display(region.resize((400, 400)))
-    px = list(region.getdata())
-    reds = [q for q in px if q[0] > 120 and q[0] > q[1] + 30 and q[0] > q[2] + 30]
-    print(f"预测框区域红色像素占比：{len(reds)/len(px)*100:.1f}%")"""),
-        md("""答案揭晓：那块区域是**红包裹投在桌面上的暖色反光**。人眼一看就知道是光斑，
-但“一坨暖色、块状、在下半幅”——对 box 检测头来说，这几个特征和“红色包裹”
-几乎无法区分。它不是在乱框，它是在**诚实地框住一个它以为的红色块**。
+    show = draw_box(img0.copy(), TRUTH["ring_box.jpg"], (255, 0, 0))
+    show = draw_box(show, pred0, (0, 200, 0))
+    display(show.resize((390, 420)))"""),
+        md("""追查结果反转了剧情：把预测框裁出来放大（上一节的图）——
+**里面就是戒指盒本身，框得相当准**。再回头看人工标定的红框：
+它把盒子位置估到了画面中部，而盒子实际在右下。**错的是标注，不是模型**。
 
-这一节是本册真正想教的动作：**模型错了，先弄清它“看见了什么”**。
-画框、裁剪、放大、数像素——四个动作把一次失败变成一条可解释的证据链。"""),
+第一次“红色像素 2%”的误判还教会第二课：追查代码自己也会有 bug
+（当时裁错了区域），**取证工具也要用已知真值自检**——否则错误会像
+滚雪球一样从标注滚到追查结论里。"""),
+        md("""## 4.5 一问一框的正解：分开问，再取并集
+
+问“两个人”只能拿到一个框，正解是**每人一问**（官方模式）。同一请求里放
+两个 box 问题，分别点名“左边的女生”和“右边的男生”："""),
+        code("""if "couple_photo.jpg" not in missing_scene:
+    couple = PILImage.open(SCENES / "couple_photo.jpg").convert("RGB")
+    r2 = ts.call(
+        state={"photo": Image(SCENES / "couple_photo.jpg")},
+        questions={
+            "left_person": {"type": "box",
+                "instructions": "照片 `photo` 里左边的女生"},
+            "right_person": {"type": "box",
+                "instructions": "照片 `photo` 里右边的男生"}},
+        offline_answers={
+            "left_person": _FakeAnswer(type="box",
+                box=(0.18, 0.25, 0.52, 0.99), confidence=0.66),
+            "right_person": _FakeAnswer(type="box",
+                box=(0.17, 0.19, 0.87, 0.99), confidence=0.3)})
+    for k in ("left_person", "right_person"):
+        a = r2.answers[k]
+        b = tuple(round(edge(a.box, x), 2) for x in ("left", "top", "right", "bottom"))
+        print(f"{k}: {b} conf={a.confidence}")"""),
+        md("""实测读数很诚实：**左问精准**（0.18–0.52，conf 0.66）；
+**右问仍偏宽**（把左边也框了进去，conf 0.3）——模型自己知道这个框不靠谱。
+工程上不必等完美：用**两个框的并集**裁剪，右框偏宽只会多带点背景、
+不会裁掉人——朋友圈双人照的自动裁剪就这么落地："""),
+        code("""def crop_us_two(img, left_box, right_box):
+    # 双框并集裁剪：偏宽的框只会多带背景，不会裁丢人
+    union = (min(edge(left_box, "left"), edge(right_box, "left")),
+             min(edge(left_box, "top"), edge(right_box, "top")),
+             max(edge(left_box, "right"), edge(right_box, "right")),
+             max(edge(left_box, "bottom"), edge(right_box, "bottom")))
+    w, h = img.size
+    pad_w, pad_h = int(w * 0.04), int(h * 0.03)   # 留一点呼吸边
+    box_px = (max(0, int(union[0]*w) - pad_w), max(0, int(union[1]*h) - pad_h),
+              min(w, int(union[2]*w) + pad_w), min(h, int(union[3]*h) + pad_h))
+    return img.crop(box_px)
+
+if "couple_photo.jpg" not in missing_scene:
+    lp, rp = r2.answers["left_person"].box, r2.answers["right_person"].box
+    display(crop_us_two(couple, lp, rp).resize((330, 420)))"""),
+        md("""`crop_us_two()` 读框 → 并集 → 加呼吸边 → 裁剪，四步走完“自动裁双人照”
+的应用闭环。低置信的右框在并集策略下无害——**工程设计的价值就是把模型的
+不确定性兜住**，而不是等一个完美的框。"""),
 
         md("""到这里还不能盖棺定论。公平的实验要求**区分“能力缺失”与“条件恶劣”**：
 如果模型在任何图上都框不准，是能力问题；只在真实光影下失灵，则是场景问题
@@ -776,23 +885,28 @@ for i in range(8):
         code("""clean_ious = [r[1] for r in CLEAN_ROWS]
 print(f"干净图 IoU 均值 {sum(clean_ious)/len(clean_ious):.3f}"
       f"（最低 {min(clean_ious):.3f}）")
-print("真实渲染图 IoU 均值 0.000（第 3 节）")"""),
+real_ious = [r[2] for r in REAL_ROWS]
+print(f"真实照片 IoU 均值 {sum(real_ious)/len(real_ious):.3f}（第 3 节）" if real_ious
+      else "（素材缺失，跳过真实图对照）")"""),
+
+        md("""守卫实验的恋爱版问题来了：合照里有没有“电灯泡”？——
+这是 box+Noul 组合在日常里最常见的形态：先确认存在，再谈位置。"""),
 
         md("""## 5.5 “目标不在图里”：box 永远返回四条边
 
-box **没有“没找到”这个答案**。`arm_above` 里没有绿色物体，
-对着它问“the green bottle”，看它怎么交代——同一请求带一个 Noul 守卫："""),
+box **没有“没找到”这个答案**。合照里只有两个人，
+对着它问“照片里的第三个人”（电灯泡），看它怎么交代——同一请求带一个 Noul 守卫："""),
         code("""guard = ts.call(
-    state={"photo": Image(SCENES / "arm_above.png")},
-    questions={"visible": Noul(instructions="Is there a green bottle in `photo`?"),
-               "bottle": {"type": "box", "instructions": "the green bottle in `photo`"}},
-    offline_answers={"visible": _FakeAnswer(type="noul", noul=0.11),
-                     "bottle": _FakeAnswer(type="box",
-                        box={"top": 0.4, "bottom": 0.7, "left": 0.4, "right": 0.7},
-                        confidence=0.4)}, tokens=1500)
+    state={"photo": Image(SCENES / "couple_photo.jpg")},
+    questions={"visible": Noul(instructions="照片 `photo` 里有第三个人吗？"),
+               "third": {"type": "box", "instructions": "照片 `photo` 里的第三个人"}},
+    offline_answers={"visible": _FakeAnswer(type="noul", noul=0.12),
+                     "third": _FakeAnswer(type="box",
+                        box={"top": 0.31, "bottom": 0.35, "left": 0.79, "right": 0.81},
+                        confidence=0.3)}, tokens=1500)
 v = guard.answers["visible"]
-print(f"存在性守卫 noul = {v.noul}（低 → 应忽略下面的 box）")
-gb = guard.answers["bottle"].box
+print(f"存在性守卫 noul = {v.noul}（低 → 没有第三个人，应忽略下面的 box）")
+gb = guard.answers["third"].box
 print("box 仍返回了：", tuple(round(edge(gb, k), 2)
       for k in ("left", "top", "right", "bottom")))"""),
         md("""不存在的目标照样拿到四条**格式合法但毫无意义**的边。把 box 当“where”、
@@ -816,6 +930,10 @@ if CLEAN_ROWS:
     worst = min(CLEAN_ROWS, key=lambda r: r[1])
     print(f"对照组中低于阈值 {MIN_CONF} 的样本：{low or '无'}")
     print(f"IoU 最低样本 #{worst[0]}（{worst[1]:.3f}）——扩边最该服务的对象")"""),
+        md("""守卫读数与 4.5 节合成一条完整的工程链：**存在性（Noul）→
+定位（box，分问）→ 兜底（并集+呼吸边）**。每一环都在补偿模型当前的不完美，
+这正是野区特性的正确打开方式——不等完美，用设计兜住。"""),
+
         md("""进阶做法（官方“边缘检查”）：把预测框裁出来，对四条边各问一个 Noul
 “目标是否越过了图的这条边”，哪边答是就往外扩哪边。官方在 36 张已知切边的测试图上，
 四问法抓到 30 处切边，单问“目标完整吗”只抓到 26 处——**把一个模糊问题拆成四个
@@ -833,31 +951,39 @@ Noul 守卫 → 预测框可视化抽查 → 才轮得到扩边。"""),
 
 | 要点 | 内容 |
 |---|---|
-| 请求 | `{"type": "box", "instructions": "the parcel in \`photo\`"}`，无 criteria |
-| 模型 | 仅 `jev-preview` / `jev-1.14.0`；1.13 不支持 |
+| 请求 | `{"type": "box", "instructions": "照片 \`photo\` 里的目标"}`，无 criteria |
+| 模型 | 仅 `jev-1.14.0`（本册实测）/ `jev-preview`；1.13 不支持 |
 | 答案 | `box{top,bottom,left,right}`（0–1 分数）+ `confidence` |
 | 读框 | 边 × 图宽/高 = 像素框；**务必画回原图核对** |
-| 陷阱 | 没有“未找到”（配 Noul 守卫）；**confidence 会失真**；光影场景先小范围试点 |
+| 陷阱 | **一问一框**（问“两个人”只交一个框）；没有“未找到”（配 Noul 守卫）；confidence 会失真 |
 
-## 本册实测结论（2026-10-15，jev-preview）
+## 本册实测结论（2026-10-16，jev-1.14.0 中文提问）
 
 | 场景 | IoU | confidence | 结论 |
 |---|---|---|---|
-| 程序生成（无光影） | 均值 ~0.92 | 0.86–0.96 | 几何定位能力真实存在 |
-| MuJoCo 渲染（有反光） | 0.00 | ~0.9 | 反光被当目标，置信失真 |
+| 烛光戒指盒（视觉复查后） | 0.93 | 0.91 | 模型框准了；**错的曾是标注** |
+| 合照问“两个人” | 0.40 | 0.40 | 一问一框：只交了左边的人，低置信诚实 |
+| 合照分问两人（左/右） | 左准右宽 | 0.66/0.30 | 并集裁剪可兜住，应用闭环成立 |
+| 程序生成（无光影） | 均值 ~0.90 | 0.80–0.97 | 几何定位能力真实存在 |
 
-把 box 用于真实图片前，先拿十几张**你自己的场景**做一遍本册的判分流程
-（标定真值 → 画框核对 → IoU 统计）。官方"dreamer-ready"的警告，
-在这一册里有了具体的数字形状。
-
-至此第 2 章七册合上了完整的能力面：三种打分原语 + 置信度 + 图像输入 + 定位。
-野区特性会随版本快速演进，动手前先对照官方文档与知识库 42 号条目的最新口径。"""),
+把 box 用于真实照片前，先拿十几张**你自己的场景**做一遍本册的判分流程
+（标定真值 → 画框核对 → IoU 统计）。官方“dreamer-ready”的警告，
+在这一册里有了具体的数字形状。"""),
     ]
     return build(nbf.v4.new_notebook(), cells)
 
 
 if __name__ == "__main__":
     out = Path(__file__).resolve().parents[1] / "02_核心概念"
+    # 成品保护：任一册已带真实输出时必须显式 --force，防止生成器清空成品
+    import sys as _sys
+    for _name in ("06_图像输入.ipynb", "07_box定位.ipynb"):
+        _p = out / _name
+        if _p.exists() and _p.read_text(encoding="utf-8").count('"image/png"') > 0:
+            if "--force" not in _sys.argv:
+                raise SystemExit(
+                    f"⛔ {_name} 已含真实输出，直接重生成会清空它。"
+                    f"确认要重置请加 --force（随后必须重新 live 执行两册）。")
     nbf.write(build_images_notebook(), out / "06_图像输入.ipynb")
     nbf.write(build_box_notebook(), out / "07_box定位.ipynb")
     for name in ("06_图像输入.ipynb", "07_box定位.ipynb"):
