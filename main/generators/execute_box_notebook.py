@@ -4,6 +4,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shlex
 import sys
 import tempfile
 from pathlib import Path
@@ -17,6 +19,26 @@ from execute_foundations_notebooks import assert_no_key, structure_report
 ROOT = Path(__file__).resolve().parents[1]
 CHAPTER = ROOT / "02_核心概念"
 SOURCE = CHAPTER / "07_box定位.ipynb"
+
+
+def load_api_key(path):
+    """只解析单行密钥配置，不执行 .env 内容或展开 shell 表达式。"""
+    values = {}
+    for raw in Path(path).read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        name, separator, value = line.partition("=")
+        if not separator or name.strip() not in {"TYPESAFE_API_KEY", "jev-key"}:
+            continue
+        parts = shlex.split(value, comments=True, posix=True)
+        if len(parts) != 1:
+            raise ValueError("密钥配置需为非空的单行值")
+        values[name.strip()] = parts[0]
+    key = values.get("TYPESAFE_API_KEY") or values.get("jev-key")
+    if not key:
+        raise ValueError("配置文件中未找到 API 密钥")
+    return key
 
 
 def execute(mode):
@@ -68,12 +90,18 @@ def execute(mode):
     validation = ROOT / "validation/box"
     validation.mkdir(parents=True, exist_ok=True)
     if mode == "live":
-        notebook.cells[0].source = notebook.cells[0].source.replace(
-            "**运行状态：本版正式文件未执行新实验的真实 API。**",
-            "**运行状态：本文件已执行真实 API，具体模型、时间与响应见末尾记录。**")
+        notebook.cells[0].source = re.sub(
+            r"\*\*运行状态：.*?\*\*",
+            "**运行状态：本文件已执行真实 API，具体模型、时间与响应见末尾记录。**",
+            notebook.cells[0].source, count=1)
         destination = SOURCE
         notebook.metadata["jev_cookbook"]["live_validation"] = "live_executed"
+        notebook.metadata["jev_cookbook"].pop("output_review", None)
     else:
+        notebook.cells[0].source = re.sub(
+            r"\*\*运行状态：.*?\*\*",
+            "**运行状态：本文件仅执行离线人工示例；真实结果见正式 Notebook 与实测归档。**",
+            notebook.cells[0].source, count=1)
         notebook.cells[0].source = (
             "# 离线预览：人工答案，不是 Jev 实测\n\n" + notebook.cells[0].source)
         destination = validation / "07_box定位.offline.ipynb"
@@ -93,7 +121,16 @@ def execute(mode):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--mode", choices=("offline", "live"), default="live")
+    parser.add_argument("--env-file", type=Path,
+                        help="安全读取 .env 中的 TYPESAFE_API_KEY 或 jev-key，仅限 live")
     args = parser.parse_args()
+    if args.env_file:
+        if args.mode != "live":
+            parser.error("离线检查不读取密钥配置，请移除 --env-file。")
+        try:
+            os.environ["TYPESAFE_API_KEY"] = load_api_key(args.env_file)
+        except (OSError, ValueError) as error:
+            parser.error(f"无法读取密钥配置：{type(error).__name__}。")
     if args.mode == "live" and not os.environ.get("TYPESAFE_API_KEY"):
         parser.error("缺少 TYPESAFE_API_KEY；可先显式选择 --mode offline。")
     try:

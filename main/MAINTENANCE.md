@@ -120,12 +120,22 @@
 正式 Notebook 保持未执行，人工数据不能作为真实 API 验收证据。
 
 实时验收使用 `execute_box_notebook.py --mode live`，需要进程环境中的 `TYPESAFE_API_KEY`。
+密钥保存在项目根目录 `.env` 时，可在 `main/` 运行：
+
+```bash
+.venv/bin/python generators/execute_box_notebook.py --mode live --env-file ../.env
+```
+
+`--env-file` 只解析单行 `TYPESAFE_API_KEY` 或本项目已有的 `jev-key`，读入进程环境，不执行配置内容。
 默认 7 次业务请求、17 个问题，禁用自动重试；异常停止，成功才写回正式文件与 `validation/box/live.json`。
 记录保存实际返回模型、问题、响应、token 用量、参数及素材哈希，不包含密钥。
 
 2026-10-17 修订保存了[旧版文本输出](02_核心概念/box_records/legacy-20261016.json)，
 并在[参考标注](02_核心概念/scenes/box_annotations.json)中明确人物衣鞋、画面截断和单人标注限制。
-当前新版已完成离线执行与本地契约检查，真实 API 待验证。不要用历史预测为新问题填入真实输出。
+新版于 2026-10-17 完成 25 个代码单元的真实执行，7 次业务请求、17 个问题，实际模型均为 `jev-1.14.0`，
+离线调用与错误输出均为 0。逐格核对了指标、画框与应用动作，记录见
+[实测归档](02_核心概念/box_records/live-20261017.json)，本地 Notebook 检查共 11 项通过。
+双人裁剪触发复核，受控正例未触发低置信扩边；保留这些缺口，不把执行成功等同于全部策略有效。
 
 ## 贡献说明
 

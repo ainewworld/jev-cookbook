@@ -5,6 +5,7 @@ import json
 import math
 import os
 import sys
+import tempfile
 import unittest
 from email import message_from_bytes
 from pathlib import Path
@@ -18,6 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "generators"))
 from build_box_notebook import build_box_notebook
 from execute_foundations_notebooks import structure_report
+from execute_box_notebook import load_api_key
 
 
 def offline_scope():
@@ -36,6 +38,17 @@ class BoxNotebookChecks(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.scope = offline_scope()
+
+    def test_env_file_is_parsed_without_shell_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ".env"
+            path.write_text('jev-key="sample-value" # comment\nOTHER=ignored\n')
+            self.assertEqual(load_api_key(path), "sample-value")
+            path.write_text("export TYPESAFE_API_KEY='$(echo hidden)'\n")
+            self.assertEqual(load_api_key(path), "$(echo hidden)")
+            path.write_text("OTHER=ignored\n")
+            with self.assertRaises(ValueError):
+                load_api_key(path)
 
     def test_geometry_and_invalid_boxes(self):
         s = self.scope

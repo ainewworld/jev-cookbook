@@ -1,12 +1,12 @@
 {
   "status": "offline_verified_live_pending",
   "notebook": "validation/box/07_box定位.offline.ipynb",
-  "markdown_cells": 35,
+  "markdown_cells": 36,
   "code_cells": 25,
   "max_code_lines": 26,
   "kind": "jev_box_execution_audit",
   "run_mode": "offline",
-  "finished_at_utc": "2026-10-17T03:37:30.542748+00:00",
+  "finished_at_utc": "2026-10-17T04:46:00.188320+00:00",
   "requested_model": "jev-1.14.0",
   "sdk_version": "0.7.5",
   "annotation_version": "2026-10-17-v1",
@@ -117,7 +117,7 @@
     {
       "label": "base",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.440755+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.047969+00:00",
       "image_sha256": "48bffc1094cf067e015799391eb6df5a1bd28074380d45e287868aff8e11556f",
       "questions": {
         "visible": {
@@ -156,7 +156,7 @@
     {
       "label": "translated",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.441689+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.048939+00:00",
       "image_sha256": "f76df8ecf4e3996c2bf2c90d0f31a20aa0fd8bd5ad4474102f7488db1b4fdccc",
       "questions": {
         "visible": {
@@ -195,7 +195,7 @@
     {
       "label": "small",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.442464+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.049782+00:00",
       "image_sha256": "60e7346bbdbfa1f5553d5c033a5ac6c3b4ea2c79e07b39ce60b555e97e3545e6",
       "questions": {
         "visible": {
@@ -234,7 +234,7 @@
     {
       "label": "boundary",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.443172+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.050552+00:00",
       "image_sha256": "bf73631fc97eaf56df42363e8e496bd389b7c03362f19737d8593a2f3831a83c",
       "questions": {
         "visible": {
@@ -273,7 +273,7 @@
     {
       "label": "absent",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.443911+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.051300+00:00",
       "image_sha256": "7bb75c08825e7a64fc64fda2016507f23169a11685212b153e296302daeed19e",
       "questions": {
         "visible": {
@@ -312,7 +312,7 @@
     {
       "label": "ring",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.472607+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.089273+00:00",
       "image_sha256": "28b4dd6b4dca3b758ff901c828bedb76c86326d4c7c7d3412bbe24cb9e84e03f",
       "questions": {
         "visible": {
@@ -351,7 +351,7 @@
     {
       "label": "couple",
       "source": "offline",
-      "started_at_utc": "2026-10-17T03:37:30.494060+00:00",
+      "started_at_utc": "2026-10-17T04:46:00.123636+00:00",
       "image_sha256": "245ffaeba16caca2914ef98df164dc7ff2bacb3263e3ec4fd1113e41769b1306",
       "questions": {
         "group": {

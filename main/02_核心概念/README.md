@@ -99,6 +99,9 @@ $$
 
 第七册默认 `JEV_RUN_MODE=live`，缺少有效 `TYPESAFE_API_KEY` 或请求失败即停止。
 显式设置 `JEV_RUN_MODE=offline` 可运行完整人工示例，不能据此评价模型。
-旧版保存的输出见[历史记录](box_records/legacy-20261016.json)；新版真实 API 仍待执行，
-离线检查方式见[维护说明](../MAINTENANCE.md#box-定位实验)。
-无需密钥可先阅读[完整离线预览](../validation/box/07_box定位.offline.ipynb)，其中图表与数值全部来自人工示例。
+旧版保存的输出见[历史记录](box_records/legacy-20261016.json)。新版于 2026-10-17 完成真实运行：
+7 次请求、17 个问题、实际模型 `jev-1.14.0`，没有离线回退；[完整实测记录](box_records/live-20261017.json)保留了问题、响应与参数。
+四张受控正例平均 IoU=0.869；缺失负例被跳过。双人裁剪因右侧人物 confidence=0.22 进入复核，
+受控正例未触发低置信扩边，不能把本次执行称为所有分支均已验证。
+测试与 `.env` 运行方式见[维护说明](../MAINTENANCE.md#box-定位实验)。
+无需密钥可先阅读[完整离线预览](../validation/box/07_box定位.offline.ipynb)，当前运行结果使用人工示例，历史实测归档另行标注。

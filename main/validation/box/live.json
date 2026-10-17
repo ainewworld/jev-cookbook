@@ -1,0 +1,439 @@
+{
+  "status": "live_executed_output_reviewed",
+  "notebook": "02_核心概念/07_box定位.ipynb",
+  "markdown_cells": 36,
+  "code_cells": 25,
+  "max_code_lines": 26,
+  "kind": "jev_box_execution_audit",
+  "run_mode": "live",
+  "finished_at_utc": "2026-10-17T04:42:46.365993+00:00",
+  "requested_model": "jev-1.14.0",
+  "sdk_version": "0.7.5",
+  "annotation_version": "2026-10-17-v1",
+  "annotation_sha256": "76396cedfef718fd0369bb5ea049cb005ca12f5b63a37668d5b6bbde5051fc62",
+  "thresholds": {
+    "iou": 0.5,
+    "coverage": 0.98,
+    "visible": 0.8,
+    "confidence": 0.6,
+    "pad": 0.06
+  },
+  "real_calls": 7,
+  "offline_calls": 0,
+  "results": {
+    "controlled": [
+      {
+        "样本": "base",
+        "IoU": 0.907,
+        "框覆盖率": 1.0,
+        "面积比": 1.1,
+        "confidence": 0.93,
+        "P(存在)": 0.99
+      },
+      {
+        "样本": "translated",
+        "IoU": 0.854,
+        "框覆盖率": 1.0,
+        "面积比": 1.17,
+        "confidence": 0.85,
+        "P(存在)": 0.99
+      },
+      {
+        "样本": "small",
+        "IoU": 0.779,
+        "框覆盖率": 1.0,
+        "面积比": 1.28,
+        "confidence": 0.93,
+        "P(存在)": 0.99
+      },
+      {
+        "样本": "boundary",
+        "IoU": 0.937,
+        "框覆盖率": 1.0,
+        "面积比": 1.07,
+        "confidence": 0.86,
+        "P(存在)": 0.99
+      }
+    ],
+    "guard": [
+      {
+        "样本": "base",
+        "目标存在标签": true,
+        "P(存在)": 0.99,
+        "confidence": 0.93,
+        "应用动作": "crop"
+      },
+      {
+        "样本": "absent",
+        "目标存在标签": false,
+        "P(存在)": 0.0,
+        "confidence": 0.5,
+        "应用动作": "skip"
+      }
+    ],
+    "crops": [
+      {
+        "方案": "整体问法",
+        "组框IoU": 0.428,
+        "左框覆盖率": 0.917,
+        "右框覆盖率": 0.429,
+        "面积比": 0.43,
+        "两框完整": false
+      },
+      {
+        "方案": "分问并集",
+        "组框IoU": 0.915,
+        "左框覆盖率": 0.98,
+        "右框覆盖率": 0.917,
+        "面积比": 0.92,
+        "两框完整": false
+      },
+      {
+        "方案": "并集加边",
+        "组框IoU": 0.857,
+        "左框覆盖率": 1.0,
+        "右框覆盖率": 1.0,
+        "面积比": 1.17,
+        "两框完整": true
+      }
+    ],
+    "ring": {
+      "iou": 0.9382608488202877,
+      "coverage": 0.9382608488202877,
+      "area_ratio": 0.9382608488202877
+    },
+    "low_confidence_padding": []
+  },
+  "calls": [
+    {
+      "label": "base",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:40.987600+00:00",
+      "image_sha256": "48bffc1094cf067e015799391eb6df5a1bd28074380d45e287868aff8e11556f",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "图片 photo 中是否有蓝色矩形？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "图片 photo 中的蓝色矩形整体。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 1615,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.26,
+              "bottom": 0.58,
+              "left": 0.1,
+              "right": 0.41
+            },
+            "confidence": 0.93
+          }
+        }
+      }
+    },
+    {
+      "label": "translated",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:42.405315+00:00",
+      "image_sha256": "f76df8ecf4e3996c2bf2c90d0f31a20aa0fd8bd5ad4474102f7488db1b4fdccc",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "图片 photo 中是否有蓝色矩形？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "图片 photo 中的蓝色矩形整体。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 1616,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.25,
+              "bottom": 0.59,
+              "left": 0.52,
+              "right": 0.83
+            },
+            "confidence": 0.85
+          }
+        }
+      }
+    },
+    {
+      "label": "small",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:42.687323+00:00",
+      "image_sha256": "60e7346bbdbfa1f5553d5c033a5ac6c3b4ea2c79e07b39ce60b555e97e3545e6",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "图片 photo 中是否有蓝色矩形？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "图片 photo 中的蓝色矩形整体。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 1613,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.34,
+              "bottom": 0.51,
+              "left": 0.16,
+              "right": 0.33
+            },
+            "confidence": 0.93
+          }
+        }
+      }
+    },
+    {
+      "label": "boundary",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:42.981464+00:00",
+      "image_sha256": "bf73631fc97eaf56df42363e8e496bd389b7c03362f19737d8593a2f3831a83c",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "图片 photo 中是否有蓝色矩形？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "图片 photo 中的蓝色矩形整体。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 1611,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.99
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.26,
+              "bottom": 0.57,
+              "left": 0.69,
+              "right": 1.0
+            },
+            "confidence": 0.86
+          }
+        }
+      }
+    },
+    {
+      "label": "absent",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:43.485023+00:00",
+      "image_sha256": "7bb75c08825e7a64fc64fda2016507f23169a11685212b153e296302daeed19e",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "图片 photo 中是否有蓝色矩形？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "图片 photo 中的蓝色矩形整体。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 1614,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.0
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.73,
+              "bottom": 0.84,
+              "left": 0.43,
+              "right": 0.52
+            },
+            "confidence": 0.5
+          }
+        }
+      }
+    },
+    {
+      "label": "ring",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:43.827928+00:00",
+      "image_sha256": "28b4dd6b4dca3b758ff901c828bedb76c86326d4c7c7d3412bbe24cb9e84e03f",
+      "questions": {
+        "visible": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有打开的戒指盒？"
+        },
+        "target": {
+          "type": "box",
+          "instructions": "照片 photo 中打开的戒指盒整体，包括盒盖和底座。"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 3249,
+          "output_tokens": 36
+        },
+        "answers": {
+          "visible": {
+            "type": "noul",
+            "noul": 0.98
+          },
+          "target": {
+            "type": "box",
+            "box": {
+              "top": 0.55,
+              "bottom": 0.78,
+              "left": 0.6,
+              "right": 0.91
+            },
+            "confidence": 0.95
+          }
+        }
+      }
+    },
+    {
+      "label": "couple",
+      "source": "live",
+      "started_at_utc": "2026-10-17T04:42:45.110750+00:00",
+      "image_sha256": "245ffaeba16caca2914ef98df164dc7ff2bacb3263e3ec4fd1113e41769b1306",
+      "questions": {
+        "group": {
+          "type": "box",
+          "instructions": "照片 photo 中，包含长椅上并排坐着的两位前景人物全部可见身体与衣鞋的区域。"
+        },
+        "left_person": {
+          "type": "box",
+          "instructions": "照片 photo 中长椅上左侧穿花裙的前景人物，包含全部可见身体与衣鞋，不含随身包。"
+        },
+        "right_person": {
+          "type": "box",
+          "instructions": "照片 photo 中长椅上右侧穿白色上衣的前景人物，包含全部可见身体与衣鞋及其手臂。"
+        },
+        "left_visible": {
+          "type": "noul",
+          "instructions": "照片 photo 中长椅上是否有穿花裙的前景人物？"
+        },
+        "right_visible": {
+          "type": "noul",
+          "instructions": "照片 photo 中长椅上是否有穿白色上衣的前景人物？"
+        }
+      },
+      "response": {
+        "model": "jev-1.14.0",
+        "usage": {
+          "input_tokens": 4483,
+          "output_tokens": 88
+        },
+        "answers": {
+          "group": {
+            "type": "box",
+            "box": {
+              "top": 0.22,
+              "bottom": 0.98,
+              "left": 0.18,
+              "right": 0.52
+            },
+            "confidence": 0.2
+          },
+          "left_person": {
+            "type": "box",
+            "box": {
+              "top": 0.26,
+              "bottom": 0.99,
+              "left": 0.19,
+              "right": 0.52
+            },
+            "confidence": 0.68
+          },
+          "right_person": {
+            "type": "box",
+            "box": {
+              "top": 0.2,
+              "bottom": 0.96,
+              "left": 0.49,
+              "right": 0.89
+            },
+            "confidence": 0.22
+          },
+          "left_visible": {
+            "type": "noul",
+            "noul": 0.97
+          },
+          "right_visible": {
+            "type": "noul",
+            "noul": 0.95
+          }
+        }
+      }
+    }
+  ],
+  "output_review": {
+    "reviewed_at_utc": "2026-10-17T04:45:11.553430+00:00",
+    "method": "本次代码助手逐格核对响应、指标与画框预览；非独立标注者复核。",
+    "checks": [
+      "模型与调用来源一致",
+      "25 个代码单元无错误",
+      "存在性动作符合配对标签",
+      "戒指盒高置信未达到覆盖阈值",
+      "双人裁剪按低置信规则进入 review",
+      "受控正例低置信扩边未触发，已注明缺口"
+    ],
+    "covered_application_actions": [
+      "crop",
+      "skip",
+      "review"
+    ],
+    "remaining_gaps": [
+      "受控正例未触发低置信扩边",
+      "单次小样本不能评价稳定性、总体准确率或校准"
+    ]
+  }
+}
