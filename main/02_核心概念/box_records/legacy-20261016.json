@@ -1,0 +1,144 @@
+{
+  "kind": "legacy_notebook_output",
+  "source_notebook": "07_box定位.ipynb",
+  "source_sha256": "96c655cfb1c7fcc8e851fa7aa402e6120fd5d9d0db4f88b7c9f918928af159c8",
+  "reported_run_date": "2026-10-16",
+  "date_note": "日期来自旧版正文，输出没有独立执行时间戳。这里只保存已有单元格文本，非原始 HTTP 响应，也不是本次调用。",
+  "reported_model": "jev-1.14.0",
+  "old_reference_ltrb": {
+    "ring_box.jpg": [
+      0.6,
+      0.55,
+      0.91,
+      0.78
+    ],
+    "couple_photo.jpg": [
+      0.11,
+      0.21,
+      0.89,
+      0.87
+    ]
+  },
+  "saved_predictions": {
+    "ring_first": {
+      "box": [
+        0.61,
+        0.55,
+        0.91,
+        0.78
+      ],
+      "confidence": 0.92
+    },
+    "ring_repeat_0": {
+      "box": [
+        0.62,
+        0.55,
+        0.91,
+        0.78
+      ],
+      "confidence": 0.93
+    },
+    "ring_repeat_1": {
+      "box": [
+        0.6,
+        0.54,
+        0.91,
+        0.78
+      ],
+      "confidence": 0.92
+    },
+    "couple_group_0": {
+      "box": [
+        0.18,
+        0.22,
+        0.53,
+        0.99
+      ],
+      "confidence": 0.43
+    },
+    "couple_group_1": {
+      "box": [
+        0.18,
+        0.22,
+        0.53,
+        0.99
+      ],
+      "confidence": 0.46
+    },
+    "couple_left": {
+      "box": [
+        0.18,
+        0.24,
+        0.52,
+        0.99
+      ],
+      "confidence": 0.59
+    },
+    "couple_right": {
+      "box": [
+        0.17,
+        0.2,
+        0.88,
+        0.99
+      ],
+      "confidence": 0.31
+    }
+  },
+  "saved_text_outputs": [
+    {
+      "cell_index": 3,
+      "source": "%pip install -q -U typesafe-sdk         # 本笔记本必需（要求 Python ≥ 3.10）\n%pip install -q pillow requests        # 画测试图 / 离线回退不需要，真实调用更稳",
+      "stdout": "Note: you may need to restart the kernel to use updated packages.\nNote: you may need to restart the kernel to use updated packages.\n"
+    },
+    {
+      "cell_index": 11,
+      "source": "if client is None:\n    print(\"⚠️  未设置 TYPESAFE_API_KEY，本笔记本以【离线示例模式】运行。\")\nelse:\n    try:\n        ping = client.system_one(\"你好\", {\"g\": Noul(instructions=\"是在打招呼吗？\")})\n        print(f\"✅ API 连通正常（返回模型 {ping.model}），将进行真实实验。\")\n    except TypeSafeAuthenticationError:\n        print(\"⚠️  Key 无效（401），以下实验以【离线示例模式】运行。\")",
+      "stdout": "✅ API 连通正常（返回模型 jev-1.14.0），将进行真实实验。\n"
+    },
+    {
+      "cell_index": 13,
+      "source": "from PIL import Image as PILImage, ImageDraw\n\nSCENES = Path(\"scenes\")\n# 人工目视标定：目标的 (left, top, right, bottom) 归一化边\n# ring_box 标的是\"戒指盒整体\"（戒指本身太小，先按盒标）\nTRUTH = {\n    # 初版标定 (0.32,0.63,0.68,0.85) 是错的（盒子实际在右下）——视觉复核后修正：\n    \"ring_box.jpg\":     (0.60, 0.55, 0.91, 0.78),\n    \"couple_photo.jpg\": (0.11, 0.21, 0.89, 0.87),\n}\nmissing_scene = [n for n in TRUTH if not (SCENES / n).exists()]\nprint(\"素材缺失：\" + str(missing_scene) if missing_scene else \"两图与标定就位 ✅\")",
+      "stdout": "两图与标定就位 ✅\n"
+    },
+    {
+      "cell_index": 17,
+      "source": "def edge(edges, k):\n    # SDK 的 box 是对象、离线替身是 dict 或元组——三种都取得到\n    if isinstance(edges, dict):\n        return edges[k]\n    if isinstance(edges, (tuple, list)):\n        return dict(zip((\"left\", \"top\", \"right\", \"bottom\"), edges))[k]\n    return getattr(edges, k)\n\ndef to_pixels(edges, size):\n    # 分数边 -> 像素框 (left, top, right, bottom)\n    w, h = size\n    return (round(edge(edges, \"left\") * w), round(edge(edges, \"top\") * h),\n            round(edge(edges, \"right\") * w), round(edge(edges, \"bottom\") * h))\n\ndef iou(box_a, box_b):\n    inter = (max(0, min(box_a[2], box_b[2]) - max(box_a[0], box_b[0]))\n             * max(0, min(box_a[3], box_b[3]) - max(box_a[1], box_b[1])))\n    union = ((box_a[2]-box_a[0])*(box_a[3]-box_a[1])\n             + (box_b[2]-box_b[0])*(box_b[3]-box_b[1]) - inter)\n    return inter / union if union else 0.0\nBOX_Q = {\"parcel\": {\"type\": \"box\",\n                   \"instructions\": \"照片 `photo` 里的包裹\"}}\nprint(\"工具函数就绪：edge / to_pixels / iou / BOX_Q\")",
+      "stdout": "工具函数就绪：edge / to_pixels / iou / BOX_Q\n"
+    },
+    {
+      "cell_index": 18,
+      "source": "BOX_RING = {\"ring\": {\"type\": \"box\",\n                   \"instructions\": \"照片 `photo` 里的戒指盒\"}}\n\nimg0 = None\nif not missing_scene:\n    img0 = PILImage.open(SCENES / \"ring_box.jpg\").convert(\"RGB\")\n    r0 = ts.call(state={\"photo\": Image(SCENES / \"ring_box.jpg\")},\n                 questions=BOX_RING,\n                 offline_answers={\"ring\": _FakeAnswer(\n                     type=\"box\", box=TRUTH[\"ring_box.jpg\"], confidence=0.9)},\n                 tokens=1500)\n    a0 = r0.answers[\"ring\"]\n    pred0 = tuple(edge(a0.box, k) for k in (\"left\", \"top\", \"right\", \"bottom\"))\n    print(\"box =\", pred0, \"| confidence =\", a0.confidence)\n    print(\"IoU =\", round(iou(pred0, TRUTH[\"ring_box.jpg\"]), 3))",
+      "stdout": "box = (0.61, 0.55, 0.91, 0.78) | confidence = 0.92\nIoU = 0.968\n"
+    },
+    {
+      "cell_index": 22,
+      "source": "REAL_ROWS = []\nASKS = [(\"ring_box.jpg\", \"ring\", \"照片 `photo` 里的戒指盒\"),\n        (\"couple_photo.jpg\", \"pair\", \"照片 `photo` 里的两个人\")]\nfor fname, qkey, ins in ASKS:\n    if missing_scene:\n        break\n    for t in range(2):\n        r = ts.call(state={\"photo\": Image(SCENES / fname)},\n                    questions={qkey: {\"type\": \"box\", \"instructions\": ins}},\n                    offline_answers={qkey: _FakeAnswer(\n                        type=\"box\", box=TRUTH[fname], confidence=0.9)},\n                    tokens=1500)\n        a = r.answers[qkey]\n        pred = tuple(edge(a.box, k) for k in (\"left\", \"top\", \"right\", \"bottom\"))\n        REAL_ROWS.append((fname, t, iou(pred, TRUTH[fname]), a.confidence,\n                          tuple(round(x, 2) for x in pred)))\nfor fname, t, sc, cf, pred in REAL_ROWS:\n    print(f\"{fname:17s} #{t}  IoU={sc:.3f}  conf={cf:.2f}  pred={pred}\")",
+      "stdout": "ring_box.jpg      #0  IoU=0.935  conf=0.93  pred=(0.62, 0.55, 0.91, 0.78)\nring_box.jpg      #1  IoU=0.958  conf=0.92  pred=(0.6, 0.54, 0.91, 0.78)\ncouple_photo.jpg  #0  IoU=0.409  conf=0.43  pred=(0.18, 0.22, 0.53, 0.99)\ncouple_photo.jpg  #1  IoU=0.409  conf=0.46  pred=(0.18, 0.22, 0.53, 0.99)\n"
+    },
+    {
+      "cell_index": 29,
+      "source": "if \"couple_photo.jpg\" not in missing_scene:\n    couple = PILImage.open(SCENES / \"couple_photo.jpg\").convert(\"RGB\")\n    r2 = ts.call(\n        state={\"photo\": Image(SCENES / \"couple_photo.jpg\")},\n        questions={\n            \"left_person\": {\"type\": \"box\",\n                \"instructions\": \"照片 `photo` 里左边的女生\"},\n            \"right_person\": {\"type\": \"box\",\n                \"instructions\": \"照片 `photo` 里右边的男生\"}},\n        offline_answers={\n            \"left_person\": _FakeAnswer(type=\"box\",\n                box=(0.18, 0.25, 0.52, 0.99), confidence=0.66),\n            \"right_person\": _FakeAnswer(type=\"box\",\n                box=(0.17, 0.19, 0.87, 0.99), confidence=0.3)})\n    for k in (\"left_person\", \"right_person\"):\n        a = r2.answers[k]\n        b = tuple(round(edge(a.box, x), 2) for x in (\"left\", \"top\", \"right\", \"bottom\"))\n        print(f\"{k}: {b} conf={a.confidence}\")",
+      "stdout": "left_person: (0.18, 0.24, 0.52, 0.99) conf=0.59\nright_person: (0.17, 0.2, 0.88, 0.99) conf=0.31\n"
+    },
+    {
+      "cell_index": 35,
+      "source": "import random\n\ndef parcel_at(x0, y0, w, h, size=(800, 600)):\n    # 纯色背景 + 无光影包裹：可控图的上界实验\n    img = PILImage.new(\"RGB\", size, (205, 206, 210))\n    d = ImageDraw.Draw(img)\n    d.rectangle([x0, y0, x0+w, y0+h], fill=(150, 105, 60),\n                outline=(90, 60, 30), width=4)\n    return img, (x0, y0, x0+w, y0+h)\n\nCLEAN_ROWS = []\nrandom.seed(42)\nfor i in range(8):\n    if TS.offline and i > 0:\n        break\n    x, y = random.randint(60, 540), random.randint(50, 380)\n    img, truth = parcel_at(x, y, random.choice([180, 220, 260]),\n                           random.choice([140, 180, 210]))\n    p = f\"/tmp/jev_img/box_r{i}.jpg\"\n    img.save(p, quality=90)\n    truth_n = (truth[0]/800, truth[1]/600, truth[2]/800, truth[3]/600)\n    r = ts.call(state={\"photo\": Image(Path(p))}, questions=BOX_Q,\n                offline_answers={\"parcel\": _FakeAnswer(\n                    type=\"box\", box=truth_n, confidence=0.9)}, tokens=1580)\n    a = r.answers[\"parcel\"]\n    pred = tuple(edge(a.box, k) for k in (\"left\", \"top\", \"right\", \"bottom\"))\n    CLEAN_ROWS.append((i, iou(pred, truth_n), a.confidence))\n    print(f\"#{i}  IoU={CLEAN_ROWS[-1][1]:.3f}  confidence={a.confidence}\")",
+      "stdout": "#0  IoU=0.887  confidence=0.92\n#1  IoU=0.873  confidence=0.91\n#2  IoU=0.911  confidence=0.93\n#3  IoU=0.901  confidence=0.93\n#4  IoU=0.841  confidence=0.96\n#5  IoU=0.888  confidence=0.86\n#6  IoU=0.951  confidence=0.94\n#7  IoU=0.917  confidence=0.94\n"
+    },
+    {
+      "cell_index": 36,
+      "source": "clean_ious = [r[1] for r in CLEAN_ROWS]\nprint(f\"干净图 IoU 均值 {sum(clean_ious)/len(clean_ious):.3f}\"\n      f\"（最低 {min(clean_ious):.3f}）\")\nreal_ious = [r[2] for r in REAL_ROWS]\nprint(f\"真实照片 IoU 均值 {sum(real_ious)/len(real_ious):.3f}（第 3 节）\" if real_ious\n      else \"（素材缺失，跳过真实图对照）\")",
+      "stdout": "干净图 IoU 均值 0.896（最低 0.841）\n真实照片 IoU 均值 0.678（第 3 节）\n"
+    },
+    {
+      "cell_index": 39,
+      "source": "guard = ts.call(\n    state={\"photo\": Image(SCENES / \"couple_photo.jpg\")},\n    questions={\"visible\": Noul(instructions=\"照片 `photo` 里有第三个人吗？\"),\n               \"third\": {\"type\": \"box\", \"instructions\": \"照片 `photo` 里的第三个人\"}},\n    offline_answers={\"visible\": _FakeAnswer(type=\"noul\", noul=0.12),\n                     \"third\": _FakeAnswer(type=\"box\",\n                        box={\"top\": 0.31, \"bottom\": 0.35, \"left\": 0.79, \"right\": 0.81},\n                        confidence=0.3)}, tokens=1500)\nv = guard.answers[\"visible\"]\nprint(f\"存在性守卫 noul = {v.noul}（低 → 没有第三个人，应忽略下面的 box）\")\ngb = guard.answers[\"third\"].box\nprint(\"box 仍返回了：\", tuple(round(edge(gb, k), 2)\n      for k in (\"left\", \"top\", \"right\", \"bottom\")))",
+      "stdout": "存在性守卫 noul = 0.14（低 → 没有第三个人，应忽略下面的 box）\nbox 仍返回了： (0.79, 0.31, 0.8, 0.96)\n"
+    },
+    {
+      "cell_index": 41,
+      "source": "PAD, MIN_CONF = 0.06, 0.6\n\ndef padded(edges, pad=PAD):\n    return {\"left\": max(0.0, edge(edges, \"left\") - pad),\n            \"top\": max(0.0, edge(edges, \"top\") - pad),\n            \"right\": min(1.0, edge(edges, \"right\") + pad),\n            \"bottom\": min(1.0, edge(edges, \"bottom\") + pad)}\n\nif CLEAN_ROWS:\n    low = [i for i, sc, cf in CLEAN_ROWS if cf < MIN_CONF]\n    worst = min(CLEAN_ROWS, key=lambda r: r[1])\n    print(f\"对照组中低于阈值 {MIN_CONF} 的样本：{low or '无'}\")\n    print(f\"IoU 最低样本 #{worst[0]}（{worst[1]:.3f}）——扩边最该服务的对象\")",
+      "stdout": "对照组中低于阈值 0.6 的样本：无\nIoU 最低样本 #4（0.841）——扩边最该服务的对象\n"
+    }
+  ]
+}

@@ -17,14 +17,15 @@
     "title": "核心概念",
     "directory": "02_核心概念",
     "stage": "入门与核心",
-    "summary": "通过五册 Notebook，逐步拆解状态、原语、概率与置信度。",
+    "summary": "通过七册 Notebook，理解状态、原语、概率与置信度，并完成图像定位和裁剪实验。",
     "topics": [
       "System One",
       "State",
       "Choice / Score / Noul",
-      "置信度与校准"
+      "置信度与校准",
+      "图像输入与 Box 定位"
     ],
-    "outcome": "为任务选择问题类型，区分概率、置信度与预测正确性。"
+    "outcome": "为任务选择问题类型，区分概率与正确性，并用参考标注检查定位和裁剪结果。"
   },
   {
     "number": "03",

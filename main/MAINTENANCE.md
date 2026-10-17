@@ -20,6 +20,7 @@
 | [build_state_notebook.py](generators/build_state_notebook.py) | 状态 |
 | [build_primitives_notebook.py](generators/build_primitives_notebook.py) | 原语 |
 | [build_confidence_notebook.py](generators/build_confidence_notebook.py) | 置信度 |
+| [build_box_notebook.py](generators/build_box_notebook.py) | 第七册 Box：受控定位、缺失守卫、场景裁剪与扩边策略 |
 | [build_patterns_notebook.py](generators/build_patterns_notebook.py) | 架构模式 |
 | [build_build_with_typesafe_notebook.py](generators/build_build_with_typesafe_notebook.py) | 应用构建 |
 | [build_pi_jev_notebook.py](generators/build_pi_jev_notebook.py) | Pi + Jev 集成 |
@@ -100,6 +101,31 @@
 修改措辞或阈值后需重新生成并执行。按返回结果挑选的试句不能再作为无偏准确率测试集；准确率、漏检和覆盖率需要独立标注的留出数据。
 
 正式验收需同时满足：真实调用数为正、离线调用数和错误输出为零，输出与解释一致，公开文件不含密钥。
+
+## Box 定位实验
+
+第七册独立生成，避免修改 Box 时清空第六册的历史输出。在 `main/` 运行：
+
+```bash
+.venv/bin/python generators/build_box_notebook.py
+.venv/bin/python generators/execute_box_notebook.py --mode offline
+.venv/bin/python -m unittest discover -s tests -p 'test_box_notebook.py' -v
+```
+
+如果正式文件已有输出，生成器会停止；先另存实验再加 `--force`。旧批量入口支持
+`build_image_box_notebooks.py --chapter box`，调用同一个 Box 生成器。
+
+离线执行在空工作目录的新内核完成，移除 API 密钥，通过 `JEV_BOX_DIR` 显式指定素材目录。
+输出副本为 `validation/box/07_box定位.offline.ipynb`，记录为 `validation/box/offline.json`；
+正式 Notebook 保持未执行，人工数据不能作为真实 API 验收证据。
+
+实时验收使用 `execute_box_notebook.py --mode live`，需要进程环境中的 `TYPESAFE_API_KEY`。
+默认 7 次业务请求、17 个问题，禁用自动重试；异常停止，成功才写回正式文件与 `validation/box/live.json`。
+记录保存实际返回模型、问题、响应、token 用量、参数及素材哈希，不包含密钥。
+
+2026-10-17 修订保存了[旧版文本输出](02_核心概念/box_records/legacy-20261016.json)，
+并在[参考标注](02_核心概念/scenes/box_annotations.json)中明确人物衣鞋、画面截断和单人标注限制。
+当前新版已完成离线执行与本地契约检查，真实 API 待验证。不要用历史预测为新问题填入真实输出。
 
 ## 贡献说明
 

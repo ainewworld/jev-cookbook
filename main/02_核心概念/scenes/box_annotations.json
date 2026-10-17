@@ -1,0 +1,57 @@
+{
+  "kind": "manual_teaching_reference",
+  "version": "2026-10-17-v1",
+  "coordinate_system": "pixel xyxy / left, top, right, bottom; half-open edges",
+  "limitations": "这些是人工教学参考框，不是精确分割或独立评测金标。标注先固定再运行；修改参考框需另存版本并重算全部结果。",
+  "images": {
+    "ring_box.jpg": {
+      "targets": {
+        "ring": {
+          "description": "打开的戒指盒整体，包括盒盖与底座；不只标戒指。",
+          "box_px": [
+            470,
+            770,
+            721,
+            1104
+          ]
+        }
+      },
+      "note": "根据原图人工复核的教学参考框，未做独立双人标注。",
+      "sha256": "353e8c4aa99219fbb18ca9b91ecfdf9380b39731762ea205166f2ef0fa82f844",
+      "size": [
+        788,
+        1400
+      ]
+    },
+    "couple_photo.jpg": {
+      "targets": {
+        "left_person": {
+          "description": "左侧穿花裙的前景人物的全部可见身体与衣鞋；不含随身包和另一人的手臂。",
+          "box_px": [
+            210,
+            363,
+            605,
+            1400
+          ],
+          "clipped_by_image": true
+        },
+        "right_person": {
+          "description": "右侧穿白色上衣的前景人物的全部可见身体与衣鞋，包括绕到左侧的手臂。",
+          "box_px": [
+            194,
+            267,
+            1030,
+            1398
+          ],
+          "clipped_by_image": false
+        }
+      },
+      "note": "两个人的框会相交；背景有人，不能作为不存在第三个人的负例。左侧人物鞋部被原图边缘截断。",
+      "sha256": "7b086c8cfd5578bb02de46486ebf3b094d724c5a7021e6309b26b8d9c1fbb509",
+      "size": [
+        1120,
+        1400
+      ]
+    }
+  }
+}
