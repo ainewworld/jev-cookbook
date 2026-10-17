@@ -1,0 +1,98 @@
+{
+  "kind": "legacy_images_notebook_output",
+  "archive_date": "2026-10-17",
+  "source_sha256": "d6886e2f5e180e3774ce6a4064c7e0449268d28c28d42b0858ab154de3a32d73",
+  "provenance": "归档修改前的已保存单元格输出；原文件无独立执行时间戳或完整请求记录，不能作为本次真实验证。",
+  "saved_text_outputs": [
+    {
+      "cell_index": 3,
+      "source": "%pip install -q -U typesafe-sdk         # 本笔记本必需（要求 Python ≥ 3.10）\n%pip install -q pillow requests        # 画测试图 / 离线回退不需要，真实调用更稳",
+      "stdout": "Note: you may need to restart the kernel to use updated packages.\nNote: you may need to restart the kernel to use updated packages.\n"
+    },
+    {
+      "cell_index": 11,
+      "source": "if client is None:\n    print(\"⚠️  未设置 TYPESAFE_API_KEY，本笔记本以【离线示例模式】运行。\")\nelse:\n    try:\n        ping = client.system_one(\"你好\", {\"g\": Noul(instructions=\"是在打招呼吗？\")})\n        print(f\"✅ API 连通正常（返回模型 {ping.model}），将进行真实实验。\")\n    except TypeSafeAuthenticationError:\n        print(\"⚠️  Key 无效（401），以下实验以【离线示例模式】运行。\")",
+      "stdout": "✅ API 连通正常（返回模型 jev-1.14.0），将进行真实实验。\n"
+    },
+    {
+      "cell_index": 13,
+      "source": "from PIL import Image as PILImage, ImageDraw\n\nSCENES = Path(\"scenes\")\nPHOTOS = {\n    \"cafe_selfie\":    \"咖啡馆日落的拿铁自拍\",\n    \"overtime_night\": \"深夜办公室的疲惫自拍\",\n    \"brunch_table\":   \"俯拍的精致早午餐\",\n    \"sunset_chairs\":  \"河边的日落与两把空椅\",\n}\nSCENE_FILES = {k: SCENES / f\"{k}.jpg\" for k in PHOTOS}\nneutral_face = SCENES / \"neutral_face.jpg\"\nmissing_scene = [p.name for p in (*SCENE_FILES.values(), neutral_face) if not p.exists()]\nprint(\"素材缺失：\" + str(missing_scene) if missing_scene else \"五张素材就位 ✅\")",
+      "stdout": "五张素材就位 ✅\n"
+    },
+    {
+      "cell_index": 18,
+      "source": "if client is not None:\n    try:\n        client.system_one(\n            state={\"photo\": Image(SCENE_FILES[\"cafe_selfie\"])},\n            questions={\"mood\": Noul(instructions=\"照片 `photo` 里的氛围甜蜜吗？\")})\n        print(\"意外的成功：开关不是必需的？\")\n    except TypeSafeBadRequestError as e:\n        print(f\"✅ 预期的 400：{str(e)[:150]}\")\nelse:\n    print(\"（离线模式跳过 400 演示）\")",
+      "stdout": "✅ 预期的 400：POST https://api.typesafe.ai/v1/systemone: 400 Images are experimental. Send the header TypeSafe-Danger-Zone-Images: true to use them. (request_id=req\n"
+    },
+    {
+      "cell_index": 21,
+      "source": "INTENT_Q = {\n    \"mood\": Noul(instructions=\"照片 `photo` 里的氛围是甜蜜温暖的吗？\"),\n    \"intent\": Choice(instructions=(\n        \"发照片的人为什么要分享这张照片？判断分享背后的意图。\"), criteria={\n        \"sweet_moment\": \"记录甜蜜的日常瞬间。\",\n        \"craving_praise\": \"展示美好事物，期待被夸。\",\n        \"hint_invite\": \"暗示想和对方一起做这样的事。\",\n        \"seek_comfort\": \"情绪低落或舍不得，想要安慰。\"}),\n}\n\nINTENT_OFFLINE = {\n    \"cafe_selfie\":    (0.92, {\"sweet_moment\": 0.76, \"craving_praise\": 0.16, \"hint_invite\": 0.05}),\n    \"overtime_night\": (0.47, {\"sweet_moment\": 0.53, \"seek_comfort\": 0.24, \"craving_praise\": 0.14}),\n    \"brunch_table\":   (0.76, {\"sweet_moment\": 0.46, \"seek_comfort\": 0.27, \"craving_praise\": 0.15}),\n    \"sunset_chairs\":  (0.45, {\"sweet_moment\": 0.49, \"hint_invite\": 0.28, \"craving_praise\": 0.15}),\n}\nprint(\"问题就绪：mood(Noul) + intent(Choice×4)\")",
+      "stdout": "问题就绪：mood(Noul) + intent(Choice×4)\n"
+    },
+    {
+      "cell_index": 22,
+      "source": "READS = {}\nfor key, desc in PHOTOS.items():\n    noul_v, probs = INTENT_OFFLINE[key]\n    r = ts.call(\n        state={\"photo\": Image(SCENE_FILES[key]), \"about\": desc},\n        questions=INTENT_Q,\n        offline_answers={\"mood\": _FakeAnswer(type=\"noul\", noul=round(0.8 + 0.05 * len(key) % 1, 2)),\n                         \"intent\": _FakeAnswer(type=\"choice\",\n                             choice=max(probs, key=probs.get), probabilities=probs,\n                             confidence=noul_v)})\n    a = r.answers[\"intent\"]\n    READS[key] = (r.answers[\"mood\"].noul, a)\n    top3 = sorted(a.probabilities.items(), key=lambda kv: -kv[1])[:3]\n    print(f\"{key:15s} mood={READS[key][0]:.2f}  intent top3={[(k, round(v,2)) for k, v in top3]}\")",
+      "stdout": "cafe_selfie     mood=0.95  intent top3=[('sweet_moment', 0.84), ('craving_praise', 0.15), ('hint_invite', 0.01)]\novertime_night  mood=0.31  intent top3=[('seek_comfort', 0.69), ('craving_praise', 0.19), ('sweet_moment', 0.11)]\nbrunch_table    mood=0.92  intent top3=[('sweet_moment', 0.49), ('craving_praise', 0.49), ('hint_invite', 0.02)]\nsunset_chairs   mood=0.93  intent top3=[('hint_invite', 0.67), ('sweet_moment', 0.19), ('craving_praise', 0.13)]\n"
+    },
+    {
+      "cell_index": 28,
+      "source": "from PIL import ImageEnhance\n\nLIGHT_VARIANTS = []\nfor name, factor in ((\"dim\", 0.65), (\"orig\", 1.0), (\"bright\", 1.35)):\n    im = PILImage.open(neutral_face).convert(\"RGB\")\n    if factor != 1.0:\n        im = ImageEnhance.Brightness(im).enhance(factor)\n    path = Path(f\"/tmp/nf_{name}.jpg\")\n    im.save(path, quality=88)\n    LIGHT_VARIANTS.append((name, factor, path))\nprint(\"三档亮度变体已生成：dim / orig / bright\")",
+      "stdout": "三档亮度变体已生成：dim / orig / bright\n"
+    },
+    {
+      "cell_index": 29,
+      "source": "HAPPY_Q = {\"happy\": Noul(instructions=(\n    \"照片 `photo` 里的人看起来开心吗？\"))}\n\nLIGHT_OFFLINE = {\"dim\": 0.14, \"orig\": 0.16, \"bright\": 0.18}\nlight_rows = []\nfor name, factor, path in LIGHT_VARIANTS:\n    r = ts.call(state={\"photo\": Image(path)}, questions=HAPPY_Q,\n                offline_answers={\"happy\": _FakeAnswer(type=\"noul\",\n                                                      noul=LIGHT_OFFLINE[name])})\n    light_rows.append((name, factor, r.answers[\"happy\"].noul))\n    print(f\"{name:7s} ×{factor:<5} → happy noul = {light_rows[-1][2]}\")",
+      "stdout": "dim     ×0.65  → happy noul = 0.13\norig    ×1.0   → happy noul = 0.16\nbright  ×1.35  → happy noul = 0.2\n"
+    },
+    {
+      "cell_index": 33,
+      "source": "STICKERS = {\n    \"rua_you\":    (\"小鲸鱼捧爱心「rua 你」：亲昵示好，想捏一把\", \"rua_you.png\"),\n    \"fake_cry\":   (\"小鲸鱼揉眼「呜呜呜」：服软卖惨，等着被哄\", \"fake_cry.png\"),\n    \"angry_pout\": (\"小鲸鱼鼓脸「不理你了」：嗔怪抗议，需要哄\", \"angry_pout.png\"),\n    \"bear_hug\":   (\"两只小鲸鱼相拥「贴贴」：亲昵贴贴\", \"bear_hug.png\"),\n    \"ride_bear\":  (\"小鲸鱼骑乘「骑熊熊」：耍赖玩闹，不接正题\", \"ride_bear.png\"),\n}\nmissing = [k for k, (_, f) in STICKERS.items()\n           if not Path(\"stickers\", f).exists()]\nprint(\"表情包缺失：\" + str(missing) if missing else \"五张表情包就位 ✅\")",
+      "stdout": "五张表情包就位 ✅\n"
+    },
+    {
+      "cell_index": 36,
+      "source": "STICKER_CRITERIA = {\n    key: {\"description\": desc, \"example\": Image(Path(\"stickers\", fname))}\n    for key, (desc, fname) in STICKERS.items()\n}\nSTICKER_Q = {\"sticker\": Choice(\n    instructions=\"哪张贴纸最适合用来回应 `chat`？请结合每张贴纸的画面与配字判断。\",\n    criteria=STICKER_CRITERIA)}\n\nCHATS = [\n    \"老板刚在群里 @我，让我这周末也来加班\",\n    \"在吗？帮我砍一刀，就差你这一票了\",\n    \"下班了吗～给我带杯奶茶嘛，拜托拜托\",\n]\nOFFLINE_PICK = [\n    {\"sticker\": _FakeAnswer(type=\"choice\", choice=\"fake_cry\", confidence=0.76,\n        probabilities={\"fake_cry\": 0.81, \"angry_pout\": 0.14, \"ride_bear\": 0.04})},\n    {\"sticker\": _FakeAnswer(type=\"choice\", choice=\"ride_bear\", confidence=0.71,\n        probabilities={\"ride_bear\": 0.77, \"fake_cry\": 0.13, \"angry_pout\": 0.05})},\n    {\"sticker\": _FakeAnswer(type=\"choice\", choice=\"fake_cry\", confidence=0.34,\n        probabilities={\"fake_cry\": 0.47, \"rua_you\": 0.34, \"ride_bear\": 0.11})}]\nprint(\"三条消息与离线替身就绪\")",
+      "stdout": "三条消息与离线替身就绪\n"
+    },
+    {
+      "cell_index": 37,
+      "source": "for chat, offline in zip(CHATS, OFFLINE_PICK):\n    if missing:\n        break\n    r = ts.call(state={\"chat\": chat}, questions=STICKER_Q,\n                offline_answers=offline)\n    a = r.answers[\"sticker\"]\n    top3 = sorted(a.probabilities.items(), key=lambda kv: -kv[1])[:3]\n    print(f\"\\n💬 {chat}\")\n    print(f\"   → {a.choice}（confidence {a.confidence}）top3: {top3}\")\n    _, fname = STICKERS[a.choice]\n    display(PILImage.open(Path(\"stickers\", fname)).resize((120, 120)))",
+      "stdout": "\n💬 老板刚在群里 @我，让我这周末也来加班\n   → fake_cry（confidence 0.79）top3: [('fake_cry', 0.83), ('angry_pout', 0.13), ('ride_bear', 0.03)]\n\n💬 在吗？帮我砍一刀，就差你这一票了\n   → ride_bear（confidence 0.73）top3: [('ride_bear', 0.78), ('fake_cry', 0.12), ('angry_pout', 0.05)]\n\n💬 下班了吗～给我带杯奶茶嘛，拜托拜托\n   → fake_cry（confidence 0.29）top3: [('fake_cry', 0.43), ('rua_you', 0.35), ('ride_bear', 0.13)]\n"
+    },
+    {
+      "cell_index": 39,
+      "source": "HEAT_WEAK = {\"heat\": Score(instructions=(\n    \"我们打算回复一句「好呀好呀！」。面对这张照片，怎样的热情程度才合适？\"),\n    criteria=[\"1 冷静\", \"2 略带热情\", \"3 明显开心\", \"4 非常热情\", \"5 拉满\"])}\n\nHEAT_STRONG = {\"heat\": Score(instructions=(\n    \"女朋友发来了这张照片，我将回复「好呀好呀！」。\"\n    \"结合这张照片的情绪，多热情的语调才是恰当的？\"),\n    criteria=[\"1 冷静简短就好，过度热情显得敷衍\",\n              \"2 平和回应，带一点温度\",\n              \"3 明显开心，配一个感叹号正合适\",\n              \"4 非常热情，该加语气词和表情\",\n              \"5 热情拉满，她正期待被认真回应\"])}\nHEAT_OFFLINE = (2.5, {\"cafe_selfie\": 2.52, \"sunset_chairs\": 2.71,\n                      \"overtime_night\": 2.74, \"brunch_table\": 2.26})\nprint(\"弱/强两套锚点就绪\")",
+      "stdout": "弱/强两套锚点就绪\n"
+    },
+    {
+      "cell_index": 40,
+      "source": "print(\"弱锚点（预期：区分不开）\")\nfor key in PHOTOS:\n    r = ts.call(state={\"photo\": Image(SCENE_FILES[key])}, questions=HEAT_WEAK,\n                offline_answers={\"heat\": _FakeAnswer(type=\"score\",\n                    score=HEAT_OFFLINE[0] - 0.1)})\n    print(f\"  {key:15s} → {r.answers['heat'].score}\")\n\nprint(\"强锚点（预期：按画面情绪拉开）\")\nfor key in PHOTOS:\n    r = ts.call(state={\"photo\": Image(SCENE_FILES[key])}, questions=HEAT_STRONG,\n                offline_answers={\"heat\": _FakeAnswer(type=\"score\",\n                    score=HEAT_OFFLINE[1][key])})\n    print(f\"  {key:15s} → {r.answers['heat'].score}\")",
+      "stdout": "弱锚点（预期：区分不开）\n  cafe_selfie     → 2.48\n  overtime_night  → 2.25\n  brunch_table    → 2.76\n  sunset_chairs   → 2.69\n强锚点（预期：按画面情绪拉开）\n  cafe_selfie     → 2.66\n  overtime_night  → 2.47\n  brunch_table    → 2.66\n  sunset_chairs   → 2.71\n"
+    },
+    {
+      "cell_index": 43,
+      "source": "def love_advisor(photo_path, chat=None):\n    # 三连：读图猜心 + 表情包回击 + 热度校准（各一次请求）\n    r1 = ts.call(state={\"photo\": Image(photo_path), \"about\": chat or \"\"},\n                 questions=INTENT_Q, offline_answers={\n                     \"mood\": _FakeAnswer(type=\"noul\", noul=0.85),\n                     \"intent\": _FakeAnswer(type=\"choice\", choice=\"sweet_moment\",\n                         probabilities={\"sweet_moment\": 0.8}, confidence=0.8)})\n    r2 = ts.call(state={\"chat\": chat or \"看图有话说\"},\n                 questions=STICKER_Q, offline_answers=OFFLINE_PICK[0])\n    r3 = ts.call(state={\"photo\": Image(photo_path)}, questions=HEAT_STRONG,\n                 offline_answers={\"heat\": _FakeAnswer(type=\"score\", score=2.3)})\n    return r1, r2, r3\n\nif not missing_scene and not missing:\n    r1, r2, r3 = love_advisor(SCENE_FILES[\"cafe_selfie\"],\n                              \"下班路上拍的，伞都歪了也不管\")\n    intent = r1.answers[\"intent\"]\n    print(\"意图 top2:\", sorted(intent.probabilities.items(),\n                               key=lambda kv: -kv[1])[:2])\n    print(\"表情包:\", r2.answers[\"sticker\"].choice,\n          \"| 热度档位:\", r3.answers[\"heat\"].score)",
+      "stdout": "意图 top2: [('sweet_moment', 0.81), ('craving_praise', 0.13)]\n表情包: angry_pout | 热度档位: 2.7\n"
+    },
+    {
+      "cell_index": 46,
+      "source": "if client is not None:\n    small = PILImage.new(\"RGB\", (200, 200), (200, 200, 205))\n    small.save(\"/tmp/jev_img/too_small.jpg\", quality=90)\n    try:\n        client.system_one(\n            state={\"photo\": Image(Path(\"/tmp/jev_img/too_small.jpg\"))},\n            questions={\"q\": Noul(instructions=\"照片 `photo` 里有人吗？\")},\n            extra_headers=DANGER_HEADERS)\n        print(\"意外的成功：尺寸限制没有生效？\")\n    except Exception as e:\n        print(f\"✅ 预期的拒绝（{type(e).__name__}）：{str(e)[:140]}\")\nelse:\n    print(\"（离线模式跳过尺寸拒绝演示）\")",
+      "stdout": "✅ 预期的拒绝（TypeSafeBadRequestError）：POST https://api.typesafe.ai/v1/systemone: 400 Invalid image dimensions. (request_id=req_01a144ab12bb72edb387caec7c68b3ee)\n"
+    },
+    {
+      "cell_index": 48,
+      "source": "text_state = ts.call(\n    state={\"about\": \"雨天街头，男生把伞倾向女生，自己半边肩膀淋湿，两人相视而笑\"},\n    questions=INTENT_Q,\n    offline_answers={\"mood\": _FakeAnswer(type=\"noul\", noul=0.9),\n                     \"intent\": _FakeAnswer(type=\"choice\", choice=\"sweet_moment\",\n                         probabilities={\"sweet_moment\": 0.85},\n                         confidence=0.85)}, tokens=310)\nimg_state = ts.call(\n    state={\"photo\": Image(SCENE_FILES[\"cafe_selfie\"])},\n    questions=INTENT_Q,\n    offline_answers={\"mood\": _FakeAnswer(type=\"noul\", noul=0.94),\n                     \"intent\": _FakeAnswer(type=\"choice\", choice=\"sweet_moment\",\n                         probabilities={\"sweet_moment\": 0.94},\n                         confidence=0.92)}, tokens=2310)\nprint(f\"文字描述 state：{text_state.usage.input_tokens} tokens\")\nprint(f\"照片 state    ：{img_state.usage.input_tokens} tokens\")\nprint(f\"→ 一张 788×1400 的照片约多花 \"\n      f\"{img_state.usage.input_tokens - text_state.usage.input_tokens} token\")",
+      "stdout": "文字描述 state：469 tokens\n照片 state    ：3367 tokens\n→ 一张 788×1400 的照片约多花 2898 token\n"
+    },
+    {
+      "cell_index": 51,
+      "source": "def door_frame(open_ratio):\n    \"\"\"画一帧门：open_ratio 0=关 1=全开。\"\"\"\n    img = PILImage.new(\"RGB\", (520, 640), (196, 198, 204))\n    d = ImageDraw.Draw(img)\n    d.rectangle([60, 80, 460, 600], fill=(120, 90, 70))            # 门框\n    gap = int(340 * open_ratio)\n    d.rectangle([70 + gap, 90, 450, 590], fill=(88, 132, 94))      # 门板/门缝\n    d.rectangle([70, 90, 70 + gap, 590], fill=(40, 44, 52))        # 打开的缝\n    return img\n\nframes = [door_frame(0.0), door_frame(0.55), door_frame(0.0)]\nfor i, f in enumerate(frames):\n    f.save(f\"/tmp/jev_img/door_{i}.jpg\", quality=90)\nprint(\"三帧已生成：关 → 半开 → 关\")",
+      "stdout": "三帧已生成：关 → 半开 → 关\n"
+    },
+    {
+      "cell_index": 52,
+      "source": "door = ts.call(\n    state={\"frames\": [\n        {\"seconds_ago\": 2, \"frame\": Image(Path(\"/tmp/jev_img/door_0.jpg\"))},\n        {\"seconds_ago\": 1, \"frame\": Image(Path(\"/tmp/jev_img/door_1.jpg\"))},\n        {\"seconds_ago\": 0, \"frame\": Image(Path(\"/tmp/jev_img/door_2.jpg\"))},\n    ]},\n    questions={\"opened\": Noul(instructions=\"`frames` 里的门在这段时间内被打开过吗？\"),\n               \"now_closed\": Noul(instructions=\"`frames[2]` 里最新的那帧门是关着的吗？\")},\n    offline_answers={\"opened\": _FakeAnswer(type=\"noul\", noul=0.83),\n                     \"now_closed\": _FakeAnswer(type=\"noul\", noul=0.9)},\n    tokens=4900)\nprint(\"门被打开过 noul =\", door.answers[\"opened\"].noul)\nprint(\"最新一帧是关着的 noul =\", door.answers[\"now_closed\"].noul)",
+      "stdout": "门被打开过 noul = 0.92\n最新一帧是关着的 noul = 0.9\n"
+    }
+  ]
+}

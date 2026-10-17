@@ -1,0 +1,108 @@
+{
+  "version": "2026-10-17-v1",
+  "label_scope": "根据原图复核可见人脸、主体构图与贴纸配字；非独立金标。图片均为生成素材，不把生图提示词或发送者意图当标签。",
+  "photos": {
+    "cafe_selfie": {
+      "file": "scenes/cafe_selfie.jpg",
+      "face": true,
+      "composition": "person_photo",
+      "description": "咖啡馆内的人物与拿铁杯",
+      "sha256": "8243d94fbaeded284252ba5eb70da5587adf2b792bedc682704429dc4b2a1677",
+      "size": [
+        788,
+        1400
+      ]
+    },
+    "overtime_night": {
+      "file": "scenes/overtime_night.jpg",
+      "face": true,
+      "composition": "person_photo",
+      "description": "办公室内的人物自拍",
+      "sha256": "1943bd92089b94a10a3d5c63307abffca169a8d370c22a28233bc9d237fb857c",
+      "size": [
+        788,
+        1400
+      ]
+    },
+    "brunch_table": {
+      "file": "scenes/brunch_table.jpg",
+      "face": false,
+      "composition": "food_table",
+      "description": "俯拍餐桌与食物，可见手但没有脸",
+      "sha256": "4b995739f3c48387187a998a557e07feee6798aa910339c5885cf170a572e66d",
+      "size": [
+        788,
+        1400
+      ]
+    },
+    "sunset_chairs": {
+      "file": "scenes/sunset_chairs.jpg",
+      "face": false,
+      "composition": "outdoor_scene",
+      "description": "河边日落与两把空椅子，没有清楚可见的人脸",
+      "sha256": "8cd824b1d1d0d52b1fd1f022391f8e30b1b9b1e87f943d6ab36a0e2c38e9c9db",
+      "size": [
+        788,
+        1400
+      ]
+    },
+    "neutral_face": {
+      "file": "scenes/neutral_face.jpg",
+      "face": true,
+      "composition": "person_photo",
+      "description": "正面人物基准照，用于亮度变体",
+      "sha256": "4095622dcb78085b3f97458f6621f362651ff98a18d40d685eec36f912fd08f7",
+      "size": [
+        768,
+        1024
+      ]
+    }
+  },
+  "stickers": {
+    "rua_you": {
+      "file": "stickers/rua_you.png",
+      "caption": "抱抱",
+      "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7",
+      "size": [
+        489,
+        464
+      ]
+    },
+    "fake_cry": {
+      "file": "stickers/fake_cry.png",
+      "caption": "已老实，求放过",
+      "sha256": "095129d800f79a11febf3732e5f776c8baeb4e64991007c4b38d11900ca99154",
+      "size": [
+        444,
+        474
+      ]
+    },
+    "angry_pout": {
+      "file": "stickers/angry_pout.png",
+      "caption": "狗头保命",
+      "sha256": "9e9838cf63ee35cf7717b6ca1be83eb4ca8989c4a8a609737f6f14c98e3e4b21",
+      "size": [
+        476,
+        484
+      ]
+    },
+    "bear_hug": {
+      "file": "stickers/bear_hug.png",
+      "caption": "绝了绝了",
+      "sha256": "6b36271283037a3f7d865a15fc374049bbae1d227c53a1fe3729ddb8e781493a",
+      "size": [
+        575,
+        435
+      ]
+    },
+    "ride_bear": {
+      "file": "stickers/ride_bear.png",
+      "caption": "已装死，请自便",
+      "sha256": "47624b0022112b2d1cde225c6c0d1fe92f52a27d5dba8fa1b07488177c856096",
+      "size": [
+        642,
+        441
+      ]
+    }
+  }
+}

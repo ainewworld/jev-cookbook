@@ -36,6 +36,8 @@ Jev 的公开接口适合答案空间有限、需要结构化概率输出的判�
     ./setup_env.sh
     .venv/bin/python -m pip install -r requirements.txt -c generators/constraints-foundations.txt
 
+图像与 Box 实验需要 SDK 0.7.5；上述约束已统一到该版本，并包含 Pillow 图像依赖。
+
 实时实验需要把 TYPESAFE_API_KEY 放在启动 Jupyter 的进程环境中。密钥不要写入 Notebook、配置文件或日志。实时 API 调用可能计费，并受服务端版本、网络和限额影响。
 
 离线运行使用 Notebook 提供的示例响应，例如：

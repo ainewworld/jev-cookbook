@@ -1,0 +1,1092 @@
+{
+  "status": "offline_verified_live_pending",
+  "notebook": "validation/images/06_图像输入.offline.ipynb",
+  "markdown_cells": 38,
+  "code_cells": 26,
+  "max_code_lines": 27,
+  "kind": "jev_images_execution_audit",
+  "run_mode": "offline",
+  "finished_at_utc": "2026-10-17T05:40:49.882687+00:00",
+  "requested_model": "jev-1.14.0",
+  "sdk_version": "0.7.5",
+  "manifest_version": "2026-10-17-v1",
+  "manifest_sha256": "a7ea7012ec99a9daffe2e05d2a13102ce500199a9da01936824fdd715ffd3cdc",
+  "real_calls": 0,
+  "offline_calls": 15,
+  "real_probe_calls": 0,
+  "results": {
+    "photos": [
+      {
+        "素材": "cafe_selfie",
+        "P(人脸)": 0.96,
+        "人脸标签": true,
+        "人脸命中": true,
+        "构图选择": "person_photo",
+        "构图标签": "person_photo",
+        "构图命中": true,
+        "confidence": 0.8
+      },
+      {
+        "素材": "overtime_night",
+        "P(人脸)": 0.96,
+        "人脸标签": true,
+        "人脸命中": true,
+        "构图选择": "person_photo",
+        "构图标签": "person_photo",
+        "构图命中": true,
+        "confidence": 0.8
+      },
+      {
+        "素材": "brunch_table",
+        "P(人脸)": 0.04,
+        "人脸标签": false,
+        "人脸命中": true,
+        "构图选择": "food_table",
+        "构图标签": "food_table",
+        "构图命中": true,
+        "confidence": 0.8
+      },
+      {
+        "素材": "sunset_chairs",
+        "P(人脸)": 0.04,
+        "人脸标签": false,
+        "人脸命中": true,
+        "构图选择": "outdoor_scene",
+        "构图标签": "outdoor_scene",
+        "构图命中": true,
+        "confidence": 0.8
+      }
+    ],
+    "reference": [
+      {
+        "样本": "reference_same",
+        "P(相同)": 0.97,
+        "已知关系": true,
+        "命中": true
+      },
+      {
+        "样本": "reference_different",
+        "P(相同)": 0.03,
+        "已知关系": false,
+        "命中": true
+      }
+    ],
+    "stickers": [
+      {
+        "样本": "sticker_known",
+        "选择": "bear_hug",
+        "源图标签": "bear_hug",
+        "命中": true,
+        "confidence": 0.8
+      },
+      {
+        "样本": "sticker_none",
+        "选择": "none",
+        "源图标签": "none",
+        "命中": true,
+        "confidence": 0.8
+      }
+    ],
+    "brightness": [
+      {
+        "亮度变体": "dim",
+        "P(人脸)": 0.94
+      },
+      {
+        "亮度变体": "original",
+        "P(人脸)": 0.96
+      },
+      {
+        "亮度变体": "bright",
+        "P(人脸)": 0.95
+      }
+    ],
+    "frames": [
+      {
+        "序列": "ended_closed",
+        "最新应关闭": true,
+        "P(关闭)": 0.96,
+        "最新状态命中": true,
+        "开合期望值": 0.12,
+        "confidence": 0.8
+      },
+      {
+        "序列": "ended_open",
+        "最新应关闭": false,
+        "P(关闭)": 0.04,
+        "最新状态命中": true,
+        "开合期望值": 1.8800000000000001,
+        "confidence": 0.8
+      }
+    ],
+    "token_placement": [
+      {
+        "放置": "state 共享",
+        "input_tokens": 3000,
+        "人脸概率": 0.96,
+        "构图选择": "person_photo"
+      },
+      {
+        "放置": "instructions 重复",
+        "input_tokens": 6100,
+        "人脸概率": 0.96,
+        "构图选择": "person_photo"
+      }
+    ]
+  },
+  "calls": [
+    {
+      "label": "cafe_selfie",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.510727+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "cafe_selfie",
+            "size": [
+              788,
+              1400
+            ],
+            "sha256": "d44836d75641e1e37d0615f9fbd82fc72453af2662715e39939ec9c0c84345ea"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": "照片 photo 的画面主体属于哪一类？",
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "person_photo",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.94,
+              "food_table": 0.02,
+              "outdoor_scene": 0.02,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "overtime_night",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.510852+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "overtime_night",
+            "size": [
+              788,
+              1400
+            ],
+            "sha256": "54afba59cc1b5283dad026fcd66f6d6f097acb7eaf25f07c0e487177c85e22f0"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": "照片 photo 的画面主体属于哪一类？",
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "person_photo",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.94,
+              "food_table": 0.02,
+              "outdoor_scene": 0.02,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "brunch_table",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.510884+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "brunch_table",
+            "size": [
+              788,
+              1400
+            ],
+            "sha256": "5d44b9f9b20b81ab3151aa45d6dfd916abbf080d15ba9189fc63f00b577e16e5"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": "照片 photo 的画面主体属于哪一类？",
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "food_table",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.02,
+              "food_table": 0.94,
+              "outdoor_scene": 0.02,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "sunset_chairs",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.510906+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "sunset_chairs",
+            "size": [
+              788,
+              1400
+            ],
+            "sha256": "04b83052d55906f242ba3348bfd72ac79884b73205fe457440e79f26e8a87bb1"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": "照片 photo 的画面主体属于哪一类？",
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "outdoor_scene",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.02,
+              "food_table": 0.02,
+              "outdoor_scene": 0.94,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "reference_same",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.548247+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "reference_same",
+            "size": [
+              489,
+              464
+            ],
+            "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7"
+          }
+        }
+      },
+      "questions": {
+        "same": {
+          "type": "noul",
+          "instructions": {
+            "task": "待比较图片 photo 中的图案与 reference 的图案相同吗？允许边框或缩放变化。",
+            "reference": {
+              "image": {
+                "name": "reference_hug",
+                "size": [
+                  489,
+                  464
+                ],
+                "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "same": {
+            "type": "noul",
+            "noul": 0.97
+          }
+        }
+      }
+    },
+    {
+      "label": "reference_different",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.563769+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "reference_different",
+            "size": [
+              642,
+              441
+            ],
+            "sha256": "47624b0022112b2d1cde225c6c0d1fe92f52a27d5dba8fa1b07488177c856096"
+          }
+        }
+      },
+      "questions": {
+        "same": {
+          "type": "noul",
+          "instructions": {
+            "task": "待比较图片 photo 中的图案与 reference 的图案相同吗？允许边框或缩放变化。",
+            "reference": {
+              "image": {
+                "name": "reference_hug",
+                "size": [
+                  489,
+                  464
+                ],
+                "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7"
+              }
+            }
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "same": {
+            "type": "noul",
+            "noul": 0.03
+          }
+        }
+      }
+    },
+    {
+      "label": "sticker_known",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.701943+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "sticker_known",
+            "size": [
+              640,
+              520
+            ],
+            "sha256": "748a24a8cb421e137e444e26f12251b2a6ce9159691ffe49ed01b1a6df181a95"
+          }
+        }
+      },
+      "questions": {
+        "match": {
+          "type": "choice",
+          "instructions": "图片 photo 中的图案最匹配哪个候选图片？比较图案与文字，不匹配则选 none。",
+          "criteria": {
+            "rua_you": {
+              "image": {
+                "name": "option_rua_you",
+                "size": [
+                  489,
+                  464
+                ],
+                "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7"
+              }
+            },
+            "fake_cry": {
+              "image": {
+                "name": "option_fake_cry",
+                "size": [
+                  444,
+                  474
+                ],
+                "sha256": "095129d800f79a11febf3732e5f776c8baeb4e64991007c4b38d11900ca99154"
+              }
+            },
+            "angry_pout": {
+              "image": {
+                "name": "option_angry_pout",
+                "size": [
+                  476,
+                  484
+                ],
+                "sha256": "ffd62b03910802334e1539d4c57a2fedcc308f94ff11f9759b439d57ee316a94"
+              }
+            },
+            "bear_hug": {
+              "image": {
+                "name": "option_bear_hug",
+                "size": [
+                  575,
+                  435
+                ],
+                "sha256": "6b36271283037a3f7d865a15fc374049bbae1d227c53a1fe3729ddb8e781493a"
+              }
+            },
+            "ride_bear": {
+              "image": {
+                "name": "option_ride_bear",
+                "size": [
+                  642,
+                  441
+                ],
+                "sha256": "47624b0022112b2d1cde225c6c0d1fe92f52a27d5dba8fa1b07488177c856096"
+              }
+            },
+            "none": "与所有候选图片都不匹配。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "match": {
+            "type": "choice",
+            "choice": "bear_hug",
+            "confidence": 0.8,
+            "probabilities": {
+              "rua_you": 0.02,
+              "fake_cry": 0.02,
+              "angry_pout": 0.02,
+              "bear_hug": 0.9,
+              "ride_bear": 0.02,
+              "none": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "sticker_none",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.702852+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "sticker_none",
+            "size": [
+              400,
+              400
+            ],
+            "sha256": "163647df3fa2fde39ac6c9b09eb21bdeacfe03a11a169450b234357d5868543a"
+          }
+        }
+      },
+      "questions": {
+        "match": {
+          "type": "choice",
+          "instructions": "图片 photo 中的图案最匹配哪个候选图片？比较图案与文字，不匹配则选 none。",
+          "criteria": {
+            "rua_you": {
+              "image": {
+                "name": "option_rua_you",
+                "size": [
+                  489,
+                  464
+                ],
+                "sha256": "20a3d00f2e35cef0c5059c8b6fbb589cf23b138156a733ae63665b9574db86b7"
+              }
+            },
+            "fake_cry": {
+              "image": {
+                "name": "option_fake_cry",
+                "size": [
+                  444,
+                  474
+                ],
+                "sha256": "095129d800f79a11febf3732e5f776c8baeb4e64991007c4b38d11900ca99154"
+              }
+            },
+            "angry_pout": {
+              "image": {
+                "name": "option_angry_pout",
+                "size": [
+                  476,
+                  484
+                ],
+                "sha256": "ffd62b03910802334e1539d4c57a2fedcc308f94ff11f9759b439d57ee316a94"
+              }
+            },
+            "bear_hug": {
+              "image": {
+                "name": "option_bear_hug",
+                "size": [
+                  575,
+                  435
+                ],
+                "sha256": "6b36271283037a3f7d865a15fc374049bbae1d227c53a1fe3729ddb8e781493a"
+              }
+            },
+            "ride_bear": {
+              "image": {
+                "name": "option_ride_bear",
+                "size": [
+                  642,
+                  441
+                ],
+                "sha256": "47624b0022112b2d1cde225c6c0d1fe92f52a27d5dba8fa1b07488177c856096"
+              }
+            },
+            "none": "与所有候选图片都不匹配。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "match": {
+            "type": "choice",
+            "choice": "none",
+            "confidence": 0.8,
+            "probabilities": {
+              "rua_you": 0.02,
+              "fake_cry": 0.02,
+              "angry_pout": 0.02,
+              "bear_hug": 0.02,
+              "ride_bear": 0.02,
+              "none": 0.9
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "light_dim",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.765094+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "light_dim",
+            "size": [
+              768,
+              1024
+            ],
+            "sha256": "700720b7e1e547cfb022943e5ca464c621d18aefb858a1aa8b2af383b12d4160"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.94
+          }
+        }
+      }
+    },
+    {
+      "label": "light_original",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.800760+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "light_original",
+            "size": [
+              768,
+              1024
+            ],
+            "sha256": "5d121e3d47a7f60e2c6ffaa3b3a4c42ad187e6aa20e157016eb3d3afabb904c3"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.96
+          }
+        }
+      }
+    },
+    {
+      "label": "light_bright",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.834653+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "light_bright",
+            "size": [
+              768,
+              1024
+            ],
+            "sha256": "b8468113689800c5504543536be93b353b31b4ec59143e64a5caf837c05016f0"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.95
+          }
+        }
+      }
+    },
+    {
+      "label": "ended_closed",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.853593+00:00",
+      "state": {
+        "frames": [
+          {
+            "seconds_ago": 2,
+            "frame": {
+              "image": {
+                "name": "ended_closed_0",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2623b64ace80c8b365feeebdf6b8b28d30234f11a8f704a08c46647b13b5a43d"
+              }
+            }
+          },
+          {
+            "seconds_ago": 1,
+            "frame": {
+              "image": {
+                "name": "ended_closed_1",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2015cc6cba2d7ed2a07e0e84a791b740d2bdb66e2148f836f0eb76312efe3487"
+              }
+            }
+          },
+          {
+            "seconds_ago": 0,
+            "frame": {
+              "image": {
+                "name": "ended_closed_2",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2623b64ace80c8b365feeebdf6b8b28d30234f11a8f704a08c46647b13b5a43d"
+              }
+            }
+          }
+        ]
+      },
+      "questions": {
+        "closed": {
+          "type": "noul",
+          "instructions": "frames[2].frame 中最新一帧的门是完全关闭的吗？"
+        },
+        "openness": {
+          "type": "score",
+          "instructions": "只判断 frames[2].frame 中最新一帧门的开合程度。",
+          "criteria": [
+            "门完全关闭，门板遮住门洞。",
+            "门部分打开，仍有门板遮住部分门洞。",
+            "门完全打开，门洞基本敞开。"
+          ]
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "closed": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "openness": {
+            "type": "score",
+            "score": 0.12,
+            "confidence": 0.8,
+            "legend": {
+              "0": "门完全关闭，门板遮住门洞。",
+              "1": "门部分打开，仍有门板遮住部分门洞。",
+              "2": "门完全打开，门洞基本敞开。"
+            },
+            "probabilities": {
+              "0": 0.9,
+              "1": 0.08,
+              "2": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "ended_open",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.857049+00:00",
+      "state": {
+        "frames": [
+          {
+            "seconds_ago": 2,
+            "frame": {
+              "image": {
+                "name": "ended_open_0",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2623b64ace80c8b365feeebdf6b8b28d30234f11a8f704a08c46647b13b5a43d"
+              }
+            }
+          },
+          {
+            "seconds_ago": 1,
+            "frame": {
+              "image": {
+                "name": "ended_open_1",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2623b64ace80c8b365feeebdf6b8b28d30234f11a8f704a08c46647b13b5a43d"
+              }
+            }
+          },
+          {
+            "seconds_ago": 0,
+            "frame": {
+              "image": {
+                "name": "ended_open_2",
+                "size": [
+                  520,
+                  640
+                ],
+                "sha256": "2015cc6cba2d7ed2a07e0e84a791b740d2bdb66e2148f836f0eb76312efe3487"
+              }
+            }
+          }
+        ]
+      },
+      "questions": {
+        "closed": {
+          "type": "noul",
+          "instructions": "frames[2].frame 中最新一帧的门是完全关闭的吗？"
+        },
+        "openness": {
+          "type": "score",
+          "instructions": "只判断 frames[2].frame 中最新一帧门的开合程度。",
+          "criteria": [
+            "门完全关闭，门板遮住门洞。",
+            "门部分打开，仍有门板遮住部分门洞。",
+            "门完全打开，门洞基本敞开。"
+          ]
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "closed": {
+            "type": "noul",
+            "noul": 0.04
+          },
+          "openness": {
+            "type": "score",
+            "score": 1.8800000000000001,
+            "confidence": 0.8,
+            "legend": {
+              "0": "门完全关闭，门板遮住门洞。",
+              "1": "门部分打开，仍有门板遮住部分门洞。",
+              "2": "门完全打开，门洞基本敞开。"
+            },
+            "probabilities": {
+              "0": 0.02,
+              "1": 0.08,
+              "2": 0.9
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "cost_shared",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.863121+00:00",
+      "state": {
+        "photo": {
+          "image": {
+            "name": "cafe_selfie",
+            "size": [
+              788,
+              1400
+            ],
+            "sha256": "d44836d75641e1e37d0615f9fbd82fc72453af2662715e39939ec9c0c84345ea"
+          }
+        }
+      },
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": "照片 photo 中是否有清楚可见的人脸？"
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": "照片 photo 的画面主体属于哪一类？",
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 3000,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "person_photo",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.94,
+              "food_table": 0.02,
+              "outdoor_scene": 0.02,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    },
+    {
+      "label": "cost_duplicate",
+      "source": "offline",
+      "started_at_utc": "2026-10-17T05:40:49.863189+00:00",
+      "state": {},
+      "questions": {
+        "face": {
+          "type": "noul",
+          "instructions": {
+            "task": "照片 photo 中是否有清楚可见的人脸？",
+            "photo": {
+              "image": {
+                "name": "cafe_selfie",
+                "size": [
+                  788,
+                  1400
+                ],
+                "sha256": "d44836d75641e1e37d0615f9fbd82fc72453af2662715e39939ec9c0c84345ea"
+              }
+            }
+          }
+        },
+        "composition": {
+          "type": "choice",
+          "instructions": {
+            "task": "照片 photo 的画面主体属于哪一类？",
+            "photo": {
+              "image": {
+                "name": "cafe_selfie",
+                "size": [
+                  788,
+                  1400
+                ],
+                "sha256": "d44836d75641e1e37d0615f9fbd82fc72453af2662715e39939ec9c0c84345ea"
+              }
+            }
+          },
+          "criteria": {
+            "person_photo": "主体是人物，人脸清楚可见。",
+            "food_table": "主体是食物或餐桌，没有清楚可见的人脸。",
+            "outdoor_scene": "主体是户外景观，没有清楚可见的人脸或作为主体的食物。",
+            "other": "不属于上述类型，或画面无法确定。"
+          }
+        }
+      },
+      "response": {
+        "model": "offline-demo",
+        "usage": {
+          "input_tokens": 6100,
+          "output_tokens": 0
+        },
+        "answers": {
+          "face": {
+            "type": "noul",
+            "noul": 0.96
+          },
+          "composition": {
+            "type": "choice",
+            "choice": "person_photo",
+            "confidence": 0.8,
+            "probabilities": {
+              "person_photo": 0.94,
+              "food_table": 0.02,
+              "outdoor_scene": 0.02,
+              "other": 0.02
+            }
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {
+      "label": "missing_header",
+      "source": "offline",
+      "status": 400,
+      "expected_rejection": true,
+      "message": "人工模拟：TypeSafe-Danger-Zone-Images"
+    },
+    {
+      "label": "minimum_width",
+      "source": "offline",
+      "status": 400,
+      "expected_rejection": true,
+      "message": "人工模拟：dimensions"
+    }
+  ]
+}

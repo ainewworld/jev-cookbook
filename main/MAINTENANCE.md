@@ -20,6 +20,7 @@
 | [build_state_notebook.py](generators/build_state_notebook.py) | 状态 |
 | [build_primitives_notebook.py](generators/build_primitives_notebook.py) | 原语 |
 | [build_confidence_notebook.py](generators/build_confidence_notebook.py) | 置信度 |
+| [build_images_notebook.py](generators/build_images_notebook.py) | 第六册图像：三种证据位置、图案匹配、帧顺序与 token 对照 |
 | [build_box_notebook.py](generators/build_box_notebook.py) | 第七册 Box：受控定位、缺失守卫、场景裁剪与扩边策略 |
 | [build_patterns_notebook.py](generators/build_patterns_notebook.py) | 架构模式 |
 | [build_build_with_typesafe_notebook.py](generators/build_build_with_typesafe_notebook.py) | 应用构建 |
@@ -101,6 +102,31 @@
 修改措辞或阈值后需重新生成并执行。按返回结果挑选的试句不能再作为无偏准确率测试集；准确率、漏检和覆盖率需要独立标注的留出数据。
 
 正式验收需同时满足：真实调用数为正、离线调用数和错误输出为零，输出与解释一致，公开文件不含密钥。
+
+## 图像输入实验
+
+第六册由独立生成器维护，旧批量入口支持 `build_image_box_notebooks.py --chapter images`。
+在 `main/` 运行：
+
+```bash
+.venv/bin/python generators/build_images_notebook.py
+.venv/bin/python generators/execute_images_notebook.py --mode offline
+.venv/bin/python -m unittest discover -s tests -p 'test_images_notebook.py' -v
+.venv/bin/python generators/execute_images_notebook.py --mode live --env-file ../.env
+```
+
+正式文件有输出时须先归档再用 `--force`。离线执行在干净内核、空工作目录完成，使用人工完整响应，
+输出另存 `validation/images/06_图像输入.offline.ipynb` 与 `offline.json`。实时模式缺密钥或意外失败即停止，
+不回退；默认 15 次业务请求、23 个问题，另有 2 次核对原因的 HTTP 400 探针。
+预期协议拒绝不是错误输出，也不能用任意 Exception 冒充。`.env` 仅由执行器安全解析，不进入发布内容。
+
+[素材清单](02_核心概念/scenes/images_manifest.json)保存哈希、尺寸与可见事实，
+[旧输出](02_核心概念/images_records/legacy-before-20261017.json)只作为修订依据。
+程序画图的关系标签与照片的目视标签分别解释，不能用生图提示词为发送者意图提供真值。
+2026-10-17 完成 26 个代码单元的真实执行：15 次业务请求、23 个问题及 2 次预期 HTTP 400，
+实际模型均为 `jev-1.14.0`，离线回退与错误输出为 0。逐格输出核对见
+[实测归档](02_核心概念/images_records/live-20261017.json)。亮度任务未观察到差异；打开帧的 Score confidence=0.47，
+保留这项等级不确定性，不能仅凭 Noul 命中宣称所有视觉判断都可靠。
 
 ## Box 定位实验
 
